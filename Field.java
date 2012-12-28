@@ -56,14 +56,14 @@ public class Field {
 		return field;	
 	}
 	
-	public static float[] boxField(int x, int y){
+	public static float[] boxField(int x, int y, float v){
 		float[] field = new float[(x+2)*(y+2)] ;
 		// Feld füllen
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
 
 				if(i>(x/2-x/6) && i<(x/2+x/6) && j>(y/2-y/6) && j<(y/2+y/6)){
-				field[flin(i,j,x)] = 1F;}
+				field[flin(i,j,x)] = v;}
 				else {field[flin(i,j,x)] =0F;}
 			
 			}
@@ -74,28 +74,52 @@ public class Field {
 	public static float[] lineField(int x, int y){
 		float[] field = new float[(x+2)*(y+2)] ;
 		// Feld füllen
+		
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
 
-				if(i>(x/2-x/8) && i<(x/2+x/8) && j>(y/8) && j<(y-y/8)){
+				if(i>(x/2-x/8) && i<(x/2+x/8)){
 				field[flin(i,j,x)] = 1F;}
-				else {field[flin(i,j,x)] =0F;}
+				else {field[flin(i,j,x)] =0F;
+				
+				if(i==0 || i==x+1 || j==0 || j==y+1)
+				field[flin(i,j,x)] =0F;
+				}
 			
 			}
 		}
 		return field;	
 	}	
 	public static float[] constField(int x, int y, float value){
-		
 		float[] field = new float[(x+2)*(y+2)] ;
+		
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
+				field[flin(i,j,x)]= 0;
+			}
+		}
+		
+		
+		
+		for(int i=1; i<x+1; i++){
+			for(int j=1; j<y+1; j++){
 				field[flin(i,j,x)]= value;
 			}
 		}
 		return field;
 		
 	}
+	
+public static float[] numbField(int x, int y){
+	float[] field = new float[(x+2)*(y+2)] ;
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+				field[flin(i,j,x)]= (float)j/8f+(float)i/8f;
+			}
+		}
+		return field;
+	}
+
 	
 	
 	public static float[] imgField(int x, int y){
