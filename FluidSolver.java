@@ -20,6 +20,9 @@ public class FluidSolver {
 	float[] u, uOld;
 	float[] v, vOld;
 	
+	// Vorticity
+	float[] vorticity;
+	
 	// field to swap
 	float[] temp;
 	
@@ -76,19 +79,21 @@ public class FluidSolver {
 		div = new float[size];
 		temp = new float[size];
 		dOld = new float[size];
+		vorticity = new float[size];
 		
 		for(int x= 0; x<size; x++){
-			u[x] = uOld[x] = v[x] = vOld[x] = d[x] = dOld[x] = out[x] = q[x] = 0.0f;
+			u[x] = uOld[x] = v[x] = vOld[x] = d[x] = dOld[x] = out[x] = q[x] = vorticity[x] = 0.0f;
 		}
 		
 		//Field Init Setup=======================================
 		v = Field.boxField(ssx,ssy,2f);
 		u = Field.boxField(ssx,ssy,0f);
 		
+		
 		d = Field.boxField(ssx,ssy,1f);
 		
 		diff = 0.0000f;
-		visc = 0.0001f;
+		visc = 0.000000001f;
 		
 		System.arraycopy(d,0,out,0,size);
 	}
@@ -103,6 +108,7 @@ public class FluidSolver {
 		step++;
 		solveVel();
 		solveDens();
+		
 		System.arraycopy(d,0,out,0,size);
 	}
 	
@@ -113,14 +119,21 @@ public class FluidSolver {
 	 */
 	public void solveVel(){
 		
+		addSource(u,uOld);
+		addSource(v,vOld);
 		
+		// add moving vel Source
+		addSource(v,Field.smlBoxField(ssx,ssy,0.5f));
+		addSource(u,Field.smlBoxField(ssx,ssy,(float) Math.sin(step*0.2)));
+		
+		vorticityConf(uOld, vOld, 0.2f);
 		addSource(u,uOld);
 		addSource(v,vOld);
 		
 		swapU(); swapV();
-		//copy(u,uOld); copy(v,vOld);	
-		diffuse(1, u, uOld, visc, dt);
-		diffuse(2, v, vOld, visc, dt);
+		copy(u,uOld); copy(v,vOld);	
+		//diffuse(1, u, uOld, visc, dt);
+		//diffuse(2, v, vOld, visc, dt);
 		
 		project(u,v,q,div);
 		
@@ -141,6 +154,9 @@ public class FluidSolver {
 	 */
 	public void solveDens(){
 		addSource(d, dOld);
+		
+		// add moving vel Source
+		//addSource(d,Field.smlBoxField(ssx,ssy,0.5f));
 		
 		swapD();
 		//copy(d,dOld); 
@@ -196,7 +212,7 @@ public class FluidSolver {
 	
 	/**
 	 * Advects a field by the velocity field
-	 * @param b = BoundCond || for: uVel=1 ; vVel=2 ; other(dens)=0
+	 * @param b = BoundCond and Staggered Grid Type|| for: uVel=1(left celledge) ; vVel=2(top celledge) ; other(dens)(cellcenter)=0
 	 * @param a = Field to advect
 	 * @param aOld = Field to advect Old
 	 * @param u = U-Velocity field
@@ -206,21 +222,60 @@ public class FluidSolver {
 		
 		float x,y;
 
-		for (int i=1; i<=ssx; i++){
-			for (int j=1; j<=ssy; j++){
-				
-				// gesuchte xKoordinate x = aktuell PunktX - dt * velocityU
-				x = i - dt * u[flin(i,j)] ;
-				// gesuchte yKoordinate y = aktuell PunktY - dt * velocityV
-				y = j -  dt * v[flin(i,j)];
-				
-				//Boarder Conditions
-				if(x<0.5){		x=0.5f;}
-				if(y<0.5){		y=0.5f;}
-				if(x>ssx+0.5){	x=ssx+0.5f;}
-				if(y>ssy+0.5){	y=ssy+0.5f;}
-				
-				a[flin(i,j)] = (float)interpolate(x,y,aOld);
+		// for density (or other central data)
+		if(b==0){
+			for (int i=1; i<=ssx; i++){
+				for (int j=1; j<=ssy; j++){
+					// x and y are in middle of the u/v valuepositions.
+					x = (i+0.5f) - dt * ( u[flin(i,j)] + u[flin(i+1,j)] ) ;
+					y = (j+0.5f) - dt * ( v[flin(i,j)] + v[flin(i,j+1)] );
+					//Boarder Conditions
+					if(x<0.0){		x=0.0f;}
+					if(y<0.0){		y=0.0f;}
+					if(x>ssx+0.5){	x=ssx+0.5f;}
+					if(y>ssy+0.5){	y=ssy+0.5f;}
+					// interpolate the value of old field
+					a[flin(i,j)] = (float)interpolate(x-0.5f,y-0.5f,aOld);
+				}
+			}
+		}
+		
+		// for u velocity (stored on left cell edge)
+		if(b==1){
+			for (int i=1; i<=ssx; i++){
+				for (int j=1; j<=ssy; j++){
+					//x is onValue - for y interpolate 4 surrounding v values
+					x = i - dt * u[flin(i,j)];
+					y = (j+0.5f) - dt * ( v[flin(i-1,j)] + v[flin(i,j)] + v[flin(i-1,j+1)] + v[flin(i,j+1)])/4;
+					//Boarder Conditions
+					if(x<0.5){		x=0.5f;}
+					if(y<0.5){		y=0.5f;}
+					if(x>ssx+0.5){	x=ssx+0.5f;}
+					if(y>ssy+0.5){	y=ssy+0.5f;}
+					// interpolate the value of old field
+					a[flin(i,j)] = (float)interpolate(x,y-0.5f,aOld);
+				}
+			}
+		}
+		
+		// for v velocity (stored on upper cell edge)
+		if(b==2){
+			for (int i=1; i<=ssx; i++){
+				for (int j=1; j<=ssy; j++){
+					// backtracked x&y coordinates xy = pointXY - dt * velocityUV
+					// 1 -> position of v velocity
+					// 2 -> interpolate velocity for Staggered grid 
+					//__|==1==|__________|==============================2=====================================|
+					x = (i+0.5f) - dt * ( u[flin(i,j-1)] + u[flin(i,j)] + u[flin(i+1,j-1)] + u[flin(i+1,j)])/4 ;
+					y =  j -       dt *  v[flin(i,j)];
+					//Boarder Conditions
+					if(x<0.5){		x=0.5f;}
+					if(y<0.5){		y=0.5f;}
+					if(x>ssx+0.5){	x=ssx+0.5f;}
+					if(y>ssy+0.5){	y=ssy+0.5f;}
+					// interpolate the value of old field
+					a[flin(i,j)] = (float)interpolate(x-0.5f,y,aOld);
+				}
 			}
 		}
 		setBounds(b,a);
@@ -294,7 +349,16 @@ public class FluidSolver {
 		//calculate divergence field
 		for ( i=1 ; i<=ssx ; i++ ) {   
 			for ( j=1 ; j<=ssy ; j++ ) { 
-				div[flin(i,j)] = 0.5f*h*(u[flin(i+1,j)]-u[flin(i-1,j)]+  v[flin(i,j+1)]-v[flin(i,j-1)]);    
+				//old centered data
+				//div[flin(i,j)] = 0.5f*h*(u[flin(i+1,j)]-u[flin(i-1,j)]+  v[flin(i,j+1)]-v[flin(i,j-1)]);    
+				
+				// div at cell center
+				div[flin(i,j)] = 1f*h*(	u[flin(i+1,j)]	// u[flin(i+1,j)] 
+										- 	u[flin(i,j)]	//u[flin(i-1,j)]
+										+ 	v[flin(i,j+1)] //v[flin(i,j+1)]
+										- 	v[flin(i,j)] 	//v[flin(i,j-1)]
+										);  
+				
 				//initialize q for gauss seidel start value
 				q[flin(i,j)] = 0; 
 				
@@ -315,11 +379,16 @@ public class FluidSolver {
 		setBounds(0, q);  
 		}
 		
-		// Subtract (nabla)q from u and v
+		// Subtract (nabla)q from u and v (makes vel divergence free)
 		// u-(nabla)qx = u-(q right - q left)/2h
 		// v-(nabla)qy = v-(q down - q up)/2h
 		for ( i=1 ; i<=ssx ; i++ ) {   
 			for ( j=1 ; j<=ssy ; j++ ) {  
+				
+				// central derivation? for u with i and i-1 ? or i-1 and i+1
+				//u[flin(i,j)] -= (q[flin(i+1,j)]-q[flin(i-1,j)])/(2*h);    
+				//v[flin(i,j)] -= (q[flin(i,j+1)]-q[flin(i,j-1)])/(2*h); 
+
 				u[flin(i,j)] -= (q[flin(i+1,j)]-q[flin(i-1,j)])/(2*h);    
 				v[flin(i,j)] -= (q[flin(i,j+1)]-q[flin(i,j-1)])/(2*h);   
 			}  
@@ -327,7 +396,72 @@ public class FluidSolver {
 		setBounds(1, u);
 		setBounds(2, v);
 	} 
+	
+	/**
+	 * Calculate vorticity at point i,j and store in vorticity field
+	 * @param i
+	 * @param j
+	 * @return 
+	 */
+	public float vorticity(int i, int j){
 		
+		float du_dy =( 	(v[flin(i,j)] + v[flin(i+1,j)] + v[flin(i,j+1)] + v[flin(i+1,j+1)]) / 4 
+				 	  - (v[flin(i,j)] + v[flin(i-1,j)] + v[flin(i,j+1)] + v[flin(i-1,j+1)]) / 4 ) / 2;
+		
+		float dv_dx = ( (u[flin(i,j+1)] + u[flin(i+1,j+1)] + u[flin(i,j)] + u[flin(i+1,j)]) / 4 
+					  - (u[flin(i,j-1)] + u[flin(i+1,j-1)] + u[flin(i,j)] + u[flin(i+1,j)]) / 4 ) / 2;	
+		
+		
+		//central diff of v in x direction - central diff of u in y direction
+		return du_dy-dv_dx;
+	}
+
+	
+	/** Vortex Confinement; increases the swirly motion that tends to disappear trough numerical dampening.
+	 * 
+	 * @param vF_u Velocity_u
+	 * @param vF_v Velocity_v
+	 * @param k	Confinement Multiplier
+	 */
+	public void vorticityConf(float[] vF_u, float[] vF_v, float k){
+
+		float nab_nx, nab_ny, mag_n, nx, ny;
+		
+
+		//Calculate vorticity magnitude field = n
+		for (int i=1; i<=ssx; i++){
+			for (int j=1; j<=ssy; j++){
+				vorticity[flin(i,j)]= Math.abs(vorticity(i,j));
+			}
+		}
+		
+		//Calculate vorticity Gradient N = (nabla n) / ||n||
+		for (int i=1; i<=ssx; i++){
+			for (int j=1; j<=ssy; j++){
+				//calc nabla n for x and y by central difference
+				nab_nx = (vorticity[flin(i+1,j)] - vorticity[flin(i-1,j)]) / 2;
+				nab_ny = (vorticity[flin(i,j+1)] - vorticity[flin(i,j-1)]) / 2;
+				
+				//calculate magnitude of the vector (nab_nx , nab_ny)
+				//add small value to prevent divide by zero
+				mag_n = (float) Math.sqrt(nab_nx*nab_nx + nab_ny*nab_ny + 0.00000001f);
+				
+				// N = (nabla n) / ||n||
+				nx=nab_nx/mag_n;
+				ny=nab_ny/mag_n;
+				
+				// F = N x vorticity
+				// F = Nx * vort_y - Ny * vort_x
+				vF_u[flin(i,j)] = nx * vorticity(i,j)*k;
+				vF_v[flin(i,j)] = - ny * vorticity(i,j)*k;
+					
+				
+			}
+		}
+		
+		
+		
+	}
 		
 	/** copy xOld to x	 */
 	public void copy(float[] x, float[] xOld)	{System.arraycopy(xOld,0,x,0,xOld.length);}
@@ -352,15 +486,17 @@ public class FluidSolver {
 	 * @param f =field to correct bounds
 	 */
 	public void setBounds (int b, float[] f) { 
-		
 		// Border-column 0 and ssx+1 are being set
-		for (int i=1 ; i<=ssy ; i++ ) {   
-			f[flin(0, i)]    = b==1 ? -f[flin(1,i)]   : f[flin(1,i)];   
+		for (int i=1 ; i<=ssy ; i++ ) {  
+			f[flin(1, i)]    = b==1 ? -f[flin(2,i)]   : f[flin(1,i)];
+			f[flin(0, i)]    = b==1 ? -f[flin(2,i)]   : f[flin(1,i)];   
 			f[flin(ssx+1,i)] = b==1 ? -f[flin(ssx,i)] : f[flin(ssx,i)];   
 		}
+		
 		// Border-line 0 and ssy+1 are being set   
 		for (int i=1 ; i<=ssx ; i++ ) { 
-			f[flin(i,0  )]   = b==2 ? -f[flin(i,1)]   : f[flin(i,1)]; 
+			f[flin(i,1  )]   = b==2 ? -f[flin(i,2)]   : f[flin(i,1)]; 
+			f[flin(i,0  )]   = b==2 ? -f[flin(i,2)]   : f[flin(i,1)]; 
 			f[flin(i,ssy+1)] = b==2 ? -f[flin(i,ssy)] : f[flin(i,ssy)]; 
 		} 
 		//Corners - average between both direct neighbors
@@ -375,6 +511,9 @@ public class FluidSolver {
 	/**Interpolation: 
      *  Search neighbor fields of given field position [xpos,ypos].
      *  Then interpolate value on xpos ypos
+     *  
+     *  value not in center ==> values on integers (on gridlines)
+     *  
      **/
 	public float interpolate(float xpos, float ypos, float[] f){
 		

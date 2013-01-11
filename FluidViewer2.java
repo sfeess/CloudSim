@@ -10,7 +10,7 @@ import java.awt.image.WritableRaster;
 import javax.swing.*;
 
 
-public class FluidViewer implements ActionListener, MouseListener,MouseMotionListener {
+public class FluidViewer2 extends JPanel implements ActionListener, MouseListener,MouseMotionListener {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -19,7 +19,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	static float[] pixelField,u,v;
 	
 	static FluidSolver fs = new FluidSolver();
-	private static FluidPanel fp;
+	FluidPanel fp; 
 	
 	static int ssx, ssy, sx, sy;
 	static float scaleOut,dt;
@@ -30,11 +30,10 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	JMenuItem values;
 	JMenuItem vectors;
 	JMenuItem stepcount;
-	JMenuItem vort;
 	JMenuItem paintVel,paintDens;
 	static JSlider dtSlider ;
 	
-	static boolean dispVec,dispVal,dispVort,dispSteps,mDens,mVel;
+	static boolean dispVec,dispVal,dispSteps,mDens,mVel;
 	
 	JPanel contentPanel;
 	
@@ -54,20 +53,23 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		
 		//setup FluidSolver size
 		fs.setup(ssx, ssy, 0.19F, scaleOut);
-		fp = new FluidPanel(fs);
 		
 		//setup Output
 		pixelField = new float[sx*sy];
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
 		dispVec=mVel=true;
-		dispVal=dispSteps=mDens=dispVort=false;
+		dispVal=dispSteps=mDens=false;
 	}
 	
+	 public void update(Graphics g){ paint(g); }
+
+	 
 	// MAIN METHOD
 	public static void main(String[] args) {
 		init();
-		new FluidViewer();
+		FluidViewer fw = new FluidViewer();
+		
 		while(fs.step<200000){
 			fs.dt=dtSlider.getValue()/100f;
 
@@ -77,15 +79,15 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 			fs.step();
 			
 			try{
-				//avoid refresh flicker
-                Thread.sleep(40); //40= 25frames/1sec * 1000 millisec/sec
+                Thread.sleep(20); //40= 25frames/1sec * 1000 millisec/sec
             }
             catch (InterruptedException e){}
             
-			fp.repaint();
-			
+			fw.repaint();
+				
 		}
-	}	
+	}
+	
 	
 	// Constructor
 	public FluidViewer(){
@@ -95,10 +97,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		JPanel bottomPanel = new JPanel();
 		
 		frame.setLocation(100,100);
-		frame.setSize(fs.sx+20,fs.sy+100);
+		frame.setSize(500,500);
 		frame.setResizable(false);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
 		
 		// Top Panel
 		JMenuBar menuBar = new JMenuBar();
@@ -117,8 +118,6 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
         values.addActionListener(this);
         stepcount = new JMenuItem("Frames");
         stepcount.addActionListener(this);
-        vort = new JMenuItem("Vorticity");
-        vort.addActionListener(this);
         
         paintVel = new JMenuItem("paint Velocity");
         paintVel.addActionListener(this);
@@ -134,18 +133,17 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
         display.add(vectors);
         display.add(values);
         display.add(stepcount);
-        display.add(vort);
         action.add(paintVel);
         action.add(paintDens);
         
-        topPanel.add(menuBar, BorderLayout.WEST);
+        topPanel.add(menuBar);
          
         //CenterPanel 
        // FluidPanel fp = new FluidPanel();
         //centerPanel.setBackground(Color.blue);
         //centerPanel.add(fp);
         
-        
+         
          
 		// Bottom Control Panel
         dtSlider = new JSlider(0,100);
@@ -154,17 +152,15 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
          bottomPanel.add(dtLabel);
          bottomPanel.add(dtSlider);
          
-        fp.addMouseListener(this);
-        fp.addMouseMotionListener(this);
-        //centerPanel.setOpaque(false);  
-        //frame.setGlassPane(centerPanel);
-        //centerPanel.setVisible(true);  
+        centerPanel.addMouseListener(this);
+        centerPanel.addMouseMotionListener(this);
+        centerPanel.setOpaque(false);  
+        frame.setGlassPane(centerPanel);
+        centerPanel.setVisible(true);  
 
-        
-        
-        //frame.add(new FluidPanel(), BorderLayout.CENTER); 
+        frame.add(this); 
         frame.add(topPanel, BorderLayout.NORTH);
-        frame.add(fp, BorderLayout.CENTER);
+        //frame.add(centerPanel, BorderLayout.CENTER);
         frame.add(bottomPanel, BorderLayout.SOUTH);
         
         
@@ -174,6 +170,64 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	}
 
 	
+	// Paint Panel
+	@Override
+	public void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		
+	
+		// BiLinear interpolation SimGrid to Pixels
+		pixelField=fs.evaluate(sx,sy,fs.d);
+		
+		onimg.setColor(Color.red);
+		u = fs.evaluate(sx,sy,fs.u);
+		v = fs.evaluate(sx,sy,fs.v);
+		
+		WritableRaster raster= img.getRaster();
+		
+		// output Pixel Field
+		for(int i=0; i<sx; i++){
+			for(int j=0; j<sy; j++){
+			
+				//invert Y output
+				int c =(int)((1-pixelField[plin(i,sy-1-j)])*255);
+				c = c<0 ? 0:c; 
+				int[] d ={c,c,c};
+				raster.setPixel(i,j,d);	
+			}
+		}
+		
+		// paint Vectors
+		int u1,v1;
+			
+		for(int i=5; i<sx; i+=10){
+			for(int j=5; j<sy; j+=10){
+					
+				if(dispVec){
+				u1 = (int) (7 * u[plin(i,sy-1-j)] );
+				v1 = (int) (-7* v[plin(i,sy-1-j)]);
+				onimg.setColor(Color.red);
+				onimg.drawLine(i, j, i+u1, j+v1);
+				}
+					
+				if(i%100==35&&j%100==35&&dispVal){
+					onimg.setColor(Color.gray);
+					onimg.drawString("u="+(u[plin(i,j)]),i,j);
+					onimg.drawString("v="+(v[plin(i,j)]),i,j+10);
+				}
+			}	
+		}
+		
+		
+		if(dispSteps){
+		// Display frame number
+		onimg.setColor(Color.black);
+		onimg.drawString("Frame:"+fs.step,8,15);
+		}
+		// image on Panel
+		g.drawImage(img,0,0,this);
+	}
+
 	
 	// linearisierung NUR FÜR PIXELFIELD!!! nicht sim grid
 	public static int plin(int i, int j){
@@ -201,16 +255,12 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
        if (object.getSource() == stepcount){
     	   dispSteps=!dispSteps; 
        }
-       if (object.getSource() == vort){
-    	   dispVort=!dispVort;
-       }
        if (object.getSource() == paintVel){
     	   mVel=!mVel;
        }
        if (object.getSource() == paintDens){
     	   mDens=!mDens;
        }
-       
      
 	}
 
@@ -241,7 +291,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 
 		mx=my=0;
 		mxOld = (int) (obj.getX()/scaleOut);
-		myOld = (int) ((sy-obj.getY())/scaleOut);
+		myOld = sy-Math.abs((int) (obj.getY()/scaleOut)-17);
 		
 		
 		
@@ -258,10 +308,10 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	public void mouseDragged(MouseEvent obj) {
 		//System.out.println("mouse dragged");
 		mx = (int) (obj.getX()/scaleOut);
-		my = (int) ((sy-obj.getY())/scaleOut);
+		my =  (int) ((sy-(obj.getY()-50))/scaleOut);
 		
-		//System.out.println("mx "+mx);
-		//System.out.println("my "+my);
+		System.out.println("mx "+mx);
+		System.out.println("my "+my);
 		
 		if(mDens && mx>2 && my>2 && ssx-2>mx && (ssy-2)>my){
 			fs.dOld[flin(mx,my)]=1;

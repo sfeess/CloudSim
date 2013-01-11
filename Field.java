@@ -70,6 +70,24 @@ public class Field {
 		}
 		return field;	
 	}
+	
+	
+	
+	public static float[] smlBoxField(int x, int y, float v){
+		float[] field = new float[(x+2)*(y+2)] ;
+		// Feld füllen
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+
+				if(i>(x/2-x/20) && i<(x/2+x/20) && j>(y*1/6-y/20) && j<(y*1/6+y/20)){
+				field[flin(i,j,x)] = v;}
+				else {field[flin(i,j,x)] =0F;}
+			
+			}
+		}
+		return field;	
+	}
+	
 
 	public static float[] lineField(int x, int y){
 		float[] field = new float[(x+2)*(y+2)] ;
@@ -145,6 +163,7 @@ public static float[] numbField(int x, int y){
 				int c = 0;
 				if(i<w && j<h){
 				c = raster.getSample(i,j, 0);}
+				//c = raster.getSample(i,j, 0)-127;}
 				//System.out.println(i+" "+j);
 				field[flin(i,j,x)]=(float)c/(float)255;
 			}

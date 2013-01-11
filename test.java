@@ -14,13 +14,21 @@ import javax.swing.SwingUtilities;
 
 public class test {
 	static FluidSolver fs = new FluidSolver();
+	
+	static FluidSolver fs2;
+	
 	public static void main(String[] args) {
-		float[] f = Field.gradField(8,8);
-	
-		FluidSolver fs= new FluidSolver();
-		fs.interpolate(3.1F, 3.1F, f);
-	
-		//test
+		int ssx=10;
+		for (int i=1; i<=ssx; i++){
+			System.out.println(2%1);
+		}
+		
+		
+		
+		
+		
+		
+
 	
 	}
 	
