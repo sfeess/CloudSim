@@ -36,7 +36,6 @@ public class Field {
 		return field;
 	}
 	
-
 	// Testfeld erstellen mit der größe x+2 y+2 - Verlauf quer
 	public static float[] gradField(int x, int y){
 		float[] field = new float[(x+2)*(y+2)] ;
@@ -71,8 +70,6 @@ public class Field {
 		return field;	
 	}
 	
-	
-	
 	public static float[] smlBoxField(int x, int y, float v){
 		float[] field = new float[(x+2)*(y+2)] ;
 		// Feld füllen
@@ -88,7 +85,6 @@ public class Field {
 		return field;	
 	}
 	
-
 	public static float[] lineField(int x, int y){
 		float[] field = new float[(x+2)*(y+2)] ;
 		// Feld füllen
@@ -108,6 +104,7 @@ public class Field {
 		}
 		return field;	
 	}	
+	
 	public static float[] constField(int x, int y, float value){
 		float[] field = new float[(x+2)*(y+2)] ;
 		
@@ -128,7 +125,7 @@ public class Field {
 		
 	}
 	
-public static float[] numbField(int x, int y){
+	public static float[] numbField(int x, int y){
 	float[] field = new float[(x+2)*(y+2)] ;
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
@@ -138,8 +135,6 @@ public static float[] numbField(int x, int y){
 		return field;
 	}
 
-	
-	
 	public static float[] imgField(int x, int y){
 		BufferedImage img = null;
 		
@@ -181,4 +176,34 @@ public static float[] numbField(int x, int y){
 		
 		return field;
 		}
+	/**
+	 * 
+	 * @param x
+	 * @param y
+	 * @param p
+	 * @param scale
+	 * @param time
+	 * @param amount
+	 * @return
+	 */
+	public static float[] noiseEmitField(int x, int y, float p, float scale, float time, float amount){
+		float[] field = new float[(x+2)*(y+2)] ;
+		// Feld füllen
+		
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+
+				
+				if(j<2)field[flin(i,j,x)] = PerlinNoise.perlinNoise(i, j+time*0.2f, p, scale, 2f)*amount;
+				
+				if(i==0 || i==x+1 || j==0 || j==y+1)
+				field[flin(i,j,x)] =0F;
+				}
+			
+			}
+		
+		return field;	
+	}	
+
+
 }

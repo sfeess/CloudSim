@@ -46,8 +46,11 @@ public class FluidPanel extends JPanel{
 		
 	
 		// BiLinear interpolation SimGrid to Pixels
-		pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.d);
-		curlField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.vorticity);
+		if(!FluidViewer.dispVort)
+			pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.qv);
+			//pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.d);
+		if(FluidViewer.dispVort)
+			curlField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.vorticity);
 		
 		onimg.setColor(Color.red);
 		u = FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.u);
@@ -60,12 +63,13 @@ public class FluidPanel extends JPanel{
 		for(int i=0; i<sx; i++){
 			for(int j=0; j<sy; j++){
 			
-				int v =(int)((10*255*curlField[plin(i,sy-1-j)]));
+				int v =(int)((5*255*curlField[plin(i,sy-1-j)]));
 				v = v>254 ? 255:v; 
 				
 				//invert Y output
 				int c =(int)((1-pixelField[plin(i,sy-1-j)])*255);
 				c = c<0 ? 0:c; 
+
 				
 				int[] d ={c,c,c};
 				

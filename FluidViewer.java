@@ -67,6 +67,14 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	// MAIN METHOD
 	public static void main(String[] args) {
 		init();
+		if(fs.step==0){
+			try{
+				//avoid refresh flicker
+                Thread.sleep(10); //40= 25frames/1sec * 1000 millisec/sec
+            }
+            catch (InterruptedException e){}
+		}
+			
 		new FluidViewer();
 		while(fs.step<200000){
 			fs.dt=dtSlider.getValue()/100f;
@@ -76,12 +84,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 			
 			fs.step();
 			
-			try{
-				//avoid refresh flicker
-                Thread.sleep(40); //40= 25frames/1sec * 1000 millisec/sec
-            }
-            catch (InterruptedException e){}
-            
+			
+			
 			fp.repaint();
 			
 		}
