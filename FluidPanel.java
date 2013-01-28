@@ -1,9 +1,4 @@
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 
@@ -16,7 +11,7 @@ public class FluidPanel extends JPanel{
 	
 	static BufferedImage img;
 	static Graphics2D onimg;
-	static float[] pixelField,curlField, u,v;
+	static float[][] pixelField,curlField, u,v;
 	static FluidSolver fs;
 	static int sx,sy,ssx,ssy;
 	
@@ -28,8 +23,8 @@ public class FluidPanel extends JPanel{
 		ssy=FluidViewer.ssy;
 		
 		
-		pixelField = new float[sx*sy];
-		curlField = new float[sx*sy];
+		pixelField = new float[sx][sy];
+		curlField = new float[sx][sy];
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
 
@@ -46,29 +41,29 @@ public class FluidPanel extends JPanel{
 		
 	
 		// BiLinear interpolation SimGrid to Pixels
-		if(!FluidViewer.dispVort)
-			pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.qv);
-			//pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.d);
-		if(FluidViewer.dispVort)
-			curlField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.vorticity);
-		
-		onimg.setColor(Color.red);
-		u = FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.u);
-		v = FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.v);
-		
-		WritableRaster raster= img.getRaster();
-		
-		// output Pixel Field
-		
-		for(int i=0; i<sx; i++){
-			for(int j=0; j<sy; j++){
-			
-				int v =(int)((5*255*curlField[plin(i,sy-1-j)]));
-				v = v>254 ? 255:v; 
+				if(!FluidViewer.dispVort)
+					pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.qv);
+					//pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.d);
+				if(FluidViewer.dispVort)
+					curlField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.vorticity);
 				
-				//invert Y output
-				int c =(int)((1-pixelField[plin(i,sy-1-j)])*255);
-				c = c<0 ? 0:c; 
+				onimg.setColor(Color.red);
+				u = FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.u);
+				v = FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.v);
+				
+				WritableRaster raster= img.getRaster();
+				
+				// output Pixel Field
+				
+				for(int i=0; i<sx; i++){
+					for(int j=0; j<sy; j++){
+					
+						int v =(int)((5*255*curlField[i][sy-1-j]));
+						v = v>254 ? 255:v; 
+						
+						//invert Y output
+						int c =(int)((1-pixelField[i][sy-1-j])*255);
+						c = c<0 ? 0:c; 
 
 				
 				int[] d ={c,c,c};
@@ -86,16 +81,16 @@ public class FluidPanel extends JPanel{
 			for(int j=5; j<sy; j+=10){
 					
 				if(FluidViewer.dispVec){
-				u1 = (int) (7 * u[plin(i,sy-1-j)] );
-				v1 = (int) (-7* v[plin(i,sy-1-j)]);
+				u1 = (int) (7 * u[i][sy-1-j] );
+				v1 = (int) (-7* v[i][sy-1-j]);
 				onimg.setColor(Color.red);
 				onimg.drawLine(i, j, i+u1, j+v1);
 				}
 					
 				if(i%100==35&&j%100==35&&FluidViewer.dispVal){
 					onimg.setColor(Color.gray);
-					onimg.drawString("u="+(u[plin(i,j)]),i,j);
-					onimg.drawString("v="+(v[plin(i,j)]),i,j+10);
+					onimg.drawString("u="+(u[i][j]),i,j);
+					onimg.drawString("v="+(v[i][j]),i,j+10);
 				}
 			}	
 		}
@@ -112,12 +107,12 @@ public class FluidPanel extends JPanel{
 
 	
 	// linearisierung NUR FÜR PIXELFIELD!!! nicht sim grid
-	public static int plin(int i, int j){
-		return ((i)+(sx)*(j));
-	}
-	public static int flin(int i, int j){
-		return ((i)+(ssx+2)*(j));
-	}
+	//public static int plin(int i, int j){
+		//return ((i)+(sx)*(j));
+	//}
+	//public static int flin(int i, int j){
+	//	return ((i)+(ssx+2)*(j));
+	//}
 
 }
 		

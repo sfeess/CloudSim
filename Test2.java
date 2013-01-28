@@ -7,6 +7,8 @@ import javax.swing.*;
 
 public class Test2  {
 	
+	
+	
 	static int ssx = 10000;
 	static int ssy = 10000;
 	static float x;

@@ -5,18 +5,15 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 
 import javax.swing.*;
 
 
 public class FluidViewer implements ActionListener, MouseListener,MouseMotionListener {
 
-	private static final long serialVersionUID = 1L;
-	
 	static BufferedImage img;
 	static Graphics2D onimg;
-	static float[] pixelField,u,v;
+	static float[][] pixelField,u,v;
 	
 	static FluidSolver fs = new FluidSolver();
 	private static FluidPanel fp;
@@ -57,7 +54,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		fp = new FluidPanel(fs);
 		
 		//setup Output
-		pixelField = new float[sx*sy];
+		pixelField = new float[sx][sy];
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
 		dispVec=mVel=true;
@@ -95,7 +92,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	public FluidViewer(){
 		JFrame frame = new JFrame("Fluid Viewer");
 		JPanel topPanel = new JPanel();
-		JPanel centerPanel = new JPanel();
+		new JPanel();
 		JPanel bottomPanel = new JPanel();
 		
 		frame.setLocation(100,100);
@@ -180,12 +177,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	
 	
 	// linearisierung NUR FÜR PIXELFIELD!!! nicht sim grid
-	public static int plin(int i, int j){
-		return ((i)+(sx)*(j));
-	}
-	public static int flin(int i, int j){
-		return ((i)+(ssx+2)*(j));
-	}
+	//public static int plin(int i, int j){	return ((i)+(sx)*(j));	}
+	//public static int flin(int i, int j){	return ((i)+(ssx+2)*(j));	}
 
 	@Override
 	public void actionPerformed(ActionEvent object) {
@@ -268,36 +261,36 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		//System.out.println("my "+my);
 		
 		if(mDens && mx>2 && my>2 && ssx-2>mx && (ssy-2)>my){
-			fs.dOld[flin(mx,my)]=1;
-			fs.dOld[flin(mx-1,my)]=1;
-			fs.dOld[flin(mx+1,my)]=1;
-			fs.dOld[flin(mx,my-1)]=1;
-			fs.dOld[flin(mx,my+1)]=1;
-			fs.dOld[flin(mx-2,my)]=1;
-			fs.dOld[flin(mx+2,my)]=1;
-			fs.dOld[flin(mx,my-2)]=1;
-			fs.dOld[flin(mx,my+2)]=1;
+			fs.dOld[mx][my]		=1;
+			fs.dOld[mx-1][my]	=1;
+			fs.dOld[mx+1][my]	=1;
+			fs.dOld[mx][my-1]	=1;
+			fs.dOld[mx][my+1]	=1;
+			fs.dOld[mx-2][my]	=1;
+			fs.dOld[mx+2][my]	=1;
+			fs.dOld[mx][my-2]	=1;
+			fs.dOld[mx][my+2]	=1;
 			
-			fs.dOld[flin(mx-1,my+1)]=0.5f;
-			fs.dOld[flin(mx+1,my+1)]=0.5f;
-			fs.dOld[flin(mx-1,my-1)]=0.5f;
-			fs.dOld[flin(mx+1,my-1)]=0.5f;
+			fs.dOld[mx-1][my+1]	=0.5f;
+			fs.dOld[mx+1][my+1]	=0.5f;
+			fs.dOld[mx-1][my-1]	=0.5f;
+			fs.dOld[mx+1][my-1]	=0.5f;
 		}
 		
 		if(mVel && mx>2 && my>2 && ssx-2>mx && (ssy-2)>my){
 			
-		fs.uOld[flin(mx,my)]=mx-mxOld;
-		fs.vOld[flin(mx,my)]=my-myOld;
+		fs.uOld[mx][my]		=mx-mxOld;
+		fs.vOld[mx][my]		=my-myOld;
 		
-		fs.uOld[flin(mx+1,my)]=mx-mxOld;
-		fs.uOld[flin(mx,my+1)]=mx-mxOld;
-		fs.uOld[flin(mx-1,my)]=mx-mxOld;
-		fs.uOld[flin(mx,my-1)]=mx-mxOld;
+		fs.uOld[mx+1][my]	=mx-mxOld;
+		fs.uOld[mx][my+1]	=mx-mxOld;
+		fs.uOld[mx-1][my]	=mx-mxOld;
+		fs.uOld[mx][my-1]	=mx-mxOld;
 		
-		fs.vOld[flin(mx+1,my)]=my-myOld;
-		fs.vOld[flin(mx,my+1)]=my-myOld;
-		fs.vOld[flin(mx-1,my)]=my-myOld;
-		fs.vOld[flin(mx,my-1)]=my-myOld;
+		fs.vOld[mx+1][my]	=my-myOld;
+		fs.vOld[mx][my+1]	=my-myOld;
+		fs.vOld[mx-1][my]	=my-myOld;
+		fs.vOld[mx][my-1]	=my-myOld;
 		
 		myOld=my;
 		mxOld=mx;
