@@ -189,13 +189,24 @@ public class Field {
 		
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
-				if(j<2)field[i][j] = PerlinNoise.perlinNoise(i, j+time*0.2f, p, scale, 2f)*amount;
-				if(i==0 || i==x+1 || j==0 || j==y+1)
-				field[i][j] =0F;
+				field[i][j] = PerlinNoise.perlinNoise(i, j+time, p, scale, 1f)*amount;
+				//if(i==0 || i==x+1 || j==0 || j==y+1)
+				//field[i][j] =0F;
 			}
 		}
 		return field;	
 	}	
 
+	
+
+
+
+
 
 }
+
+
+
+
+
+

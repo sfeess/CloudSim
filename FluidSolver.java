@@ -1,3 +1,5 @@
+import java.math.BigDecimal;
+
 
 public class FluidSolver {
 	
@@ -18,22 +20,23 @@ public class FluidSolver {
 	float[][] temp;				// field to swap
 	float diff; 				// Viscosity 
 	float visc; 				// Diffusionrate
-	float wind;					// horzontal wind
+	float wind;					// horizontal wind
+		
 	
 	// Cloud variables
 	//************************************************************
 	float[][] qc, qcOld;		// Condensed cloud water mixing ratio
 	float[][] qv, qvOld;		// Water vapor mixing ratio
-	float[][] qs;				// saturation vapor mixing ratio
+	float qs;					// saturation vapor mixing ratio
 	float[][] pt, ptOld;		// potential temperature
-	float t0;					// ground temp
-	float rd;					// gas constant in J/(kg K) 
-	float maxAlt;				// upper boarder of altitude in simulation in meter
+	// Constants
 	float tlr;					// Temperature lapse rate in °C per 100meter
 	float hum;					// humidity in percent 0-1
+	float maxAlt;				// upper boarder of altitude in simulation in meter
+	float t0;					// ground temp
+	float vort, buoyancy,rd,p0,grav,lh,cp,exner;
 	float[] absT;				// absolute Temperature at altitude in K
 	float [] absP;				// absolute Pressure at altitude in kPa
-	
 	
 	// Output Fields
 	//************************************************************
@@ -90,12 +93,10 @@ public class FluidSolver {
 		qcOld = new float[ssx+2][ssy+2];
 		qv = 	new float[ssx+2][ssy+2];
 		qvOld = new float[ssx+2][ssy+2];
-		qs = 	new float[ssx+2][ssy+2];
 		pt = 	new float[ssx+2][ssy+2];
 		ptOld = new float[ssx+2][ssy+2];
 		absT = 	new float[ssy+2];
 		absP = 	new float[ssy+2];
-		
 		
 		
 		// Set Fields to Zero
@@ -107,48 +108,56 @@ public class FluidSolver {
 		}
 		// Initialize Fluid 
 		//************************************************************
-		wind = 0.0f;
+		wind = 0.1f;
 		diff = 0.0000f;
-		visc = 0.000000001f;
+		visc = 0.000000000f;
 		
-		//v = Field.boxField(ssx,ssy,0f);
-		//u = Field.constField(ssx,ssy,0f);
+		//v = Field.constField(ssx,ssy,1f);
+		//u = Field.boxField(ssx,ssy,1f);
 		//d = Field.boxField(ssx,ssy,1f);
+		//dOld = Field.boxField(ssx,ssy,1f);
 		
 		
 		// Initialize Cloud constants
 		//************************************************************
-		rd = 287; 		// specific gas constant
+		rd = 		287; 		// specific gas constant for dry air
+		p0 = 		100;		// pressure at sea level (kPa)
+		grav = 		9.81f;		// gravitational acceleration (m/s²)
+		lh = 		2501;		// Latent heat of vaporization of water (J/kg)
+		cp = 		1005;		// specific heat cpapcity J/(kg K)
 
 		// user defined
-		maxAlt = 5000;	// altitude in meter on top of sim grid
-		tlr = 0.6f; 	// Kelvin per 100 meter between 0.55 and 0.99
-		tlr /= 100; 	// Kelvin per 1 meter
-		t0 = 295;		// temp on ground
-		
-		hum = 0.5f;		// humidty
+		maxAlt = 	6000;		// altitude in meter on top of sim grid
+		tlr = 		0.6f; 		// Kelvin per 100 meter between 0.55 and 0.99
+			tlr /= 	100; 		// Kelvin per 1 meter
+		t0 = 		295;		// temp on ground in Kelvin
+		hum = 		0.2f;		// humidty
+		buoyancy =  2f;
+		vort = 		0.4f;
 		
 		// Initialize absolute Temp lookup
 		//************************************************************
 		for(int y= 0; y<ssy+2; y++){
 			// Ground Temp - (altitude / 100)* tempLapseRate
-			float alt= ((float)y/(float)ssy)*maxAlt;
-			absT[y] = t0- alt*tlr;
+			float alt = ( (float) y / (float) ssy ) * maxAlt;
+			absT[y] = t0 - alt * tlr;
 		}
 		
 		// Initialize absolute Pressure lookup in kPa
 		//************************************************************
 		for(int y= 0; y<ssy+2; y++){
-			float alt= ((float)y/(float)ssy)*maxAlt;
-			absP[y] = (float) (10* Math.pow(( 1- (alt*tlr/t0) ),9.81/(tlr*rd))) ;
+			float alt = ( (float)y / (float)ssy ) * maxAlt;
+			// a				
+			absP[y] = (float) (p0* Math.pow(( 1- ( (alt*tlr)/t0 ) ),9.81/(tlr*rd))) ;
 		}
 		
 		// Initialize pot temp
 		//************************************************************
 		for(int i= 0; i<ssx+2; i++){
 			for(int j= 0; j<ssy+2; j++){
-				pt[i][j] = (float) (absT[j]*Math.pow((100/absP[j]),0.286));  
-				
+				//					K                   kPa/kPa
+				pt[i][j] = (float) ( absT[j] * Math.pow( p0 / absP[j] , 0.286));  
+				ptOld[i][j] = pt[i][j];
 			}
 		}
 		
@@ -158,15 +167,12 @@ public class FluidSolver {
 		for(int i= 0; i<ssx+2; i++){
 			for(int j= 0; j<ssy+2; j++){
 					// temp in °C and p in Pa
-					qs[i][j] = 		(float) Math.pow(380/(absP[j]*1000),(17.67*(absT[j]-273.15))/(absT[j]-273.15+243.5));
-					qv[i][j] = 		qs[i][j] * hum;
-					qvOld[i][j] = 	qs[i][j] * hum;
+					qs = 			(float) (  (380/(absP[j]*1000)  ) * Math.exp( (17.67*(absT[j]-273.15)) / (absT[j]-273.15+243.5))) ;
+					qv[i][j] = 		qs * hum;
+					qvOld[i][j] = 	qs * hum;
 			}
 		}
 		
-		
-		
-		//System.arraycopy(d,0,out,0,size);
 	}
 	
 	
@@ -178,11 +184,15 @@ public class FluidSolver {
 		time=time+dt;
 		step++;
 		solveVel();
-		solveClouds();
-		solveDens();
-		//System.arraycopy(d,0,out,0,size);
+		//solveClouds();
+		//solveDens();
 	}
 	
+	public void debugLine(String a){
+		for(int j= 31; j>30&&j<60; j++){ 
+			//System.out.println(a+" point"+j+"    value:"+d[20][j]);
+		}
+	}
 	
 	/**
 	 * Velocity Solver
@@ -190,47 +200,54 @@ public class FluidSolver {
 	 */
 	public void solveVel(){
 		
-		addSource(u,uOld);
-		addSource(v,vOld);
-		
-		//addSource(v,Field.noiseEmitField(ssx,ssy,0.51f,4f,time*0.1f,1f));
-		// add moving vel Source
-		//addSource(v,Field.smlBoxField(ssx,ssy,0.5f));
-		//addSource(u,Field.smlBoxField(ssx,ssy,(float) Math.sin(step*0.2)));
-		
-		
-		
-		//vorticityConf(uOld, vOld, 0.1f);
 		//addSource(u,uOld);
 		//addSource(v,vOld);
 		
-		buoyancy(vOld, -0.000001f);
+		
+		//add moving vel Source
+		//addSource(v,Field.smlBoxField(ssx,ssy,0.5f));
+		//addSource(u,Field.smlBoxField(ssx,ssy,(float) Math.sin(step*0.2)));
+		
+		vorticityConf(uOld, vOld, vort);
+		addSource(u,uOld);
 		addSource(v,vOld);
 		
-		swapU(); swapV();
-		copy(u,uOld); copy(v,vOld);	
-		//diffuse(1, u, uOld, visc, dt);
-		//diffuse(2, v, vOld, visc, dt);
+		
+		
+		
 		project(u,v,uOld,vOld);
+		
+		swapQv(); swapQc(); swapPt();
+		//copy(qv,qvOld); copy(qc,qcOld);copy(pt,ptOld);
+		advect(4, qv, qvOld, u, v);
+		advect(5, qc, qcOld, u, v);
+		advect(3, pt, ptOld, u, v);
 		
 		swapU(); swapV();
 		//copy(u,uOld); copy(v,vOld);	
 		advect(1, u, uOld, uOld, vOld);
 		advect(2, v, vOld, uOld, vOld);
 		
-		
-		//addSource(qv,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,(float)Math.abs(Math.sin(time))*0.01f));
-		//Advect vapor, condensed water and pot_Temp
-		swapQv(); swapQc(); swapPt();
-		advect(3, qv, qvOld, u, v);
-		advect(0, qc, qcOld, u, v);
-		advect(0, pt, ptOld, u, v);
+		buoyancy(vOld, buoyancy);
+		addSource(v,vOld);
 		
 		waterCont();
 		
-		//qv= Field.noiseEmitField(ssx,ssy,0.51f,4f,time*1.1f,1f);
+		//diffuse(1, u, uOld, visc, dt);
+		//diffuse(2, v, vOld, visc, dt);
 		
 		project(u,v,uOld,vOld);
+		
+		
+		
+		//addSource(qv,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,(float)Math.abs(Math.sin(time))*0.01f));
+		
+		
+		
+		
+		
+		
+		
 		
 		// reset uOld vOld
 		for (int i = 0; i < ssx+2; i++) {
@@ -250,19 +267,27 @@ public class FluidSolver {
 	 * Density Solver
 	 * addDensity - Diffuse - Advect
 	 */
+	
+	
 	public void solveDens(){
-		addSource(d, dOld);
 		
+		//addSource(d, dOld);
+		//debugLine("after sourceAdd");
 		// add moving vel Source
 		//addSource(d,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,1f));
 		
-		swapD();
-		copy(d,dOld); 
+		//swapD();
+		//debugLine("after swap");
+		//copy(d,dOld); 
+		//debugLine("after copy");
 		//diffuse(0, d, dOld, diff, dt);
 		
 		swapD();
+		//debugLine("after swap");
 		
-		advect(0,d,dOld,u,v);
+		//advect(0,d,dOld,u,v);
+		advect(4,d,dOld,u,v);
+		//debugLine("after advection");
 		//copy(d,dOld);
 		
 		
@@ -271,6 +296,8 @@ public class FluidSolver {
 				dOld[i][j] = 0;
 			}
 		}
+		
+		
 		
 	}
 	
@@ -318,9 +345,13 @@ public class FluidSolver {
 	}
 	
 	
+
+	
+	
+	
 	/**
 	 * Advects a field by the velocity field
-	 * @param b = BoundCond and Staggered Grid Type|| for: uVel=1(left celledge) ; vVel=2(top celledge) ; other(dens)(cellcenter)=0
+	 * @param b =  0=central Neumann || 1=uVel || 2=vVel || 3=potTemp || 4=waterVapor || 5=cloudWater
 	 * @param a = Field to advect
 	 * @param aOld = Field to advect Old
 	 * @param u = U-Velocity field
@@ -335,8 +366,8 @@ public class FluidSolver {
 			for (int i=1; i<=ssx; i++){
 				for (int j=1; j<=ssy; j++){
 					// x and y are in middle of the u/v valuepositions.
-					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] ) ;
-					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] );
+					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )/2 ;
+					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )/2;
 					//Boarder Conditions
 					if(x<0.0){		x=0.0f;}
 					if(y<0.0){		y=0.0f;}
@@ -350,7 +381,8 @@ public class FluidSolver {
 		}
 		
 		// for u velocity (stored on left cell edge)
-		if(b==1){
+		// create particle on left cell edge
+		else if(b==1){
 			for (int i=1; i<=ssx; i++){
 				for (int j=1; j<=ssy; j++){
 					//x is onValue - for y interpolate 4 surrounding v values
@@ -369,14 +401,15 @@ public class FluidSolver {
 		}
 		
 		// for v velocity (stored on upper cell edge)
-		if(b==2){
+		// create particle on top cell edge
+		else if(b==2){
 			for (int i=1; i<=ssx; i++){
 				for (int j=1; j<=ssy; j++){
 					// backtracked x&y coordinates xy = pointXY - dt * velocityUV
 					// 1 -> position of v velocity
 					// 2 -> interpolate velocity for Staggered grid 
 					//__|==1==|__________|==============================2=====================================|
-					x = (i+0.5f) - dt * ( u[i][j-1] + u[i][j] + u[i+1][j-1] + u[i+1][j])/4 ;
+					x = (i+0.5f) - dt * ( u[i][j-1] + u[i][j] + u[i+1][j-1] + u[i+1][j])*0.25f ;
 					y =  j -       dt *  v[i][j];
 					//Boarder Conditions
 					if(x<0.5){		x=0.5f;}
@@ -390,29 +423,60 @@ public class FluidSolver {
 			setBounds(b,a);
 		}
 		
-		// for qv periodic sides
-		if(b==3){
-			for (int i=0; i<=ssx; i++){
-				for (int j=0; j<=ssy; j++){
+		else if(b==3){
+			for (int i=1; i<=ssx; i++){
+				for (int j=1; j<=ssy; j++){
 					// x and y are in middle of the u/v valuepositions.
-					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] ) ;
-					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] );
-					//System.out.println(i+"     "+x);
+					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )/2 ;
+					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )/2;
+					
+					
 					//Boarder Conditions
-					if(x<0.5){	
-						//System.out.println("smaller 1");
-						x=ssx+x;
-					}
-					if(y<0.0){		y=0.0f;}
-					if(x>ssx+1.5){	
-						System.out.println("greater ssx+1");
-						x=ssx-x;}
-					if(y>ssy+0.5){	y=ssy+0.5f;}
+					if(x<1.0){		x=1.0f;}
+					if(y<1.0){		y=1.0f;}
+					if(x>ssx+1){	x=ssx+1f;}
+					if(y>ssy+1){	y=ssy+1f;}
 					// interpolate the value of old field
-					a[i][j] = (float)interpolate(x-0.5f,y-0.5f,aOld);
+					float temp1 =(float)interpolate(x,y,aOld);
+					a[i][j] = temp1;
 				}
 			}
-			//setBounds(b,a);
+			setBounds(b,a);
+		}
+		// for qv periodic sides
+		else if(b==4){
+			
+				for (int j=1; j<=ssy; j++){
+					for (int i=1; i<=ssx; i++){
+					// x and y are in middle of the u/v valuepositions.
+					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
+					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f;
+					
+					if(y<0.0){		y=0.0f;}
+					if(y>ssy+1){	y=ssy+1f;}
+					// interpolate the value of old field
+					
+					a[i][j] = interpolatePer(x-0.5f,y-0.5f,aOld);
+					//a[i][j] = interpolatePer(i,j,aOld);
+				}
+			}
+			setBounds(b,a);
+		}
+		// for qc
+		else if(b==5){
+			for (int j=1; j<=ssy; j++){
+				for (int i=1; i<=ssx; i++){
+				// x and y are in middle of the u/v valuepositions.
+				x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
+				y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f;
+							
+				if(y<0.0){		y=0.0f;}
+				if(y>ssy+1){	y=ssy+1f;}
+				// interpolate the value of old field
+				a[i][j] = interpolate(x-0.5f,y-0.5f,aOld);
+				}
+			}
+			setBounds(b,a);
 		}
 		
 	}
@@ -599,29 +663,32 @@ public class FluidSolver {
 		
 	}
 	
-	public void initClouds(){
-		
-		
-	}
-	
-	// Update the potential temperature according to condesation
-	// Due to condensation latent energy is released in form of heat. -> change in pot temp
-	public void thermoDyn(){
-		
-		
-		
-		
-	}
 	
 	public void buoyancy(float[][] f, float k){
-		float vpt;
+		float vpt,avpt;
+		avpt=0f;
+		
+		// Calculate average temp
+		for (int i=1; i<=ssx; i++){
+			for (int j=1; j<=ssy; j++){
+				avpt += (pt[i][j] * ( 1 + 0.61f * qv[i][j]));
+			}
+		}
+		avpt = avpt / (ssx*ssy); 
+		
 		
 		for (int i=1; i<=ssx; i++){
 			for (int j=1; j<=ssy; j++){
+				// B = (vpt-avpt)/ avpt - (g* qc)
+				// vpt and avpt in Kelvin
+				// g = 9.81 m/s²
+				// qc in g/kg 
 				vpt = pt[i][j] * ( 1 + 0.61f * qv[i][j]);
-				f[i][j] = k*( ( (vpt-295) / 295 ) - 9.81f * qc[i][j] );
+				f[i][j] = k*( ( (vpt-avpt) / avpt ) - 9.81f * qc[i][j] );
+			
 			}
 		}
+		setBounds(2,f);
 	}
 	
 	
@@ -630,8 +697,8 @@ public class FluidSolver {
 		float d_qv,T,qs;
 		
 		
-		for (int i=1; i<=ssx; i++){
-			for (int j=1; j<=ssy; j++){
+		for (int i=0; i<=ssx+1; i++){
+			for (int j=0; j<=ssy+1; j++){
 				//alt=((float)j/(float)ssy)*maxAlt;
 				
 				//compute 	p(alt) in kPa
@@ -647,15 +714,15 @@ public class FluidSolver {
 				//compute 	T = pt[i,j]/( (^p/p)^k  )     
 				// 			with  ^p = 100kPa   k = ~0.286
 				//			T = pt[i,j]/( (100/p)^0.286)
-				T = (float) (pt[i][j]/Math.pow((100/absP[j]),0.286));
+				T = (float) (pt[i][j]/Math.pow((p0/absP[j]),0.286));
 				// conversion from Kelvin to Celsius
-				T = T-273.15f;
+				T -= 273.15f;
 				//
 				//compute 	qs= (380.16/p)exp((17.67*T)/(T+243.5))
 				// with T in °C and P in Pa
 				//
 				// qs nicht als feld
-				qs = (float) Math.pow((380.16/(absP[j]*1000)),((17.67*T)/(T+243.5)));
+				qs = (float) ( (380.16f / (absP[j]*1000) ) * Math.exp( (17.67f * T) / (T + 243.5f) ) );
 				
 				d_qv  = Math.min(qs - qv[i][j],qc[i][j]);
 				
@@ -663,19 +730,30 @@ public class FluidSolver {
 				qc[i][j] = qc[i][j] - d_qv;
 				
 				
+				
+				
+				// Update the potential temperature according to condesation
+				// Due to condensation latent energy is released in form of heat. -> change in pot temp
 				//update potential Temperature ( Thermodynamics Equation )
-				//delta p = -L/(cp*PI)*(delta C)
-				// L  = constant for latent heat released    	2.501 J/kg
+				//delta p = L/(cp*PI)*(delta C)
+				// L  = constant for latent heat released    	2501 J/kg
 				// cp = specific heat capacity of dry air 		1005 J/(kg K)
 				// C  = condensation rate = condensation per evaporation
 				//	  = - min(qvs-qv, qc)  siehe waterCont = d_qv
-				// PI = Exner Function = T/pt
-				//_______________-L_____/___cp___*________PI___________*____________C_________________________________
+				// PI = Exner Function = T/pt = 
+				//_______________L_____/___cp___*________PI___________*____________C_________________________________
 				T += 273.15f;
-				pt[i][j] += -2.501 / ( 1005 * (T/pt[i][j]) ) * (-d_qv);
+				exner = (float) ( Math.pow( (absP[j]/p0),0.286f )  );
+				
+				pt[i][j] += (lh / ( cp * exner )) * (-d_qv);
+				
+				
 				
 			}
 		}
+		setBounds(4, qv);
+		setBounds(5, qc);
+		setBounds(3, pt);
 		
 	}
 	
@@ -694,7 +772,11 @@ public class FluidSolver {
 	/**Swaps fields v and vOld */
 	public void swapV(){temp = v;	v=vOld;		vOld=temp;}
 	/**Swaps fields d and dOld */
-	public void swapD(){temp = d;	d=dOld;		dOld=temp;}
+	public void swapD(){
+		temp = d;	
+		d=dOld;		
+		dOld=temp;
+		}
 	/**Swaps fields pt and ptOld */
 	public void swapPt(){temp = pt;	pt=ptOld;	ptOld=temp;}
 	/**Swaps fields qc and qcOld */
@@ -702,45 +784,13 @@ public class FluidSolver {
 	/**Swaps fields qv and qvOld */
 	public void swapQv(){temp = qv;	qv=qvOld;	qvOld=temp;}
 	
-	
-	/** returns linearized ArrayIndex for Simulation Fields of position [i,j] */
-	//public int flin(int i, int j){		return ((i)+(this.ssx+2)*(j));}
-	
+
 	
 	/**
-	 * Calc boundary values (bv) out of neighbor values (nv)
-	 * @param b boundary type:	b=1:  bv=-nv (in x direction)
-	 * 							b=2:  bv=-nv (in y direction)
-	 * 							b=3:  periodic sidewalls
-	 * 							else: bv=nv 
-	 * 							for velocity bounds b=1 or b=2 for pressure b=0
-	 * @param f =field to correct bounds
+	 * 
+	 * @param b 0=central Neumann || 1=uVel || 2=vVel || 3=potTemp || 4=waterVapor || 5=cloudWater
+	 * @param f field to set boundaries
 	 */
-	public void setBoundsOriginal (int b, float[][] f) { 
-		
-		
-		// Border-column 0 and ssx+1 are being set
-		for (int i=1 ; i<=ssy ; i++ ) {  
-			f[1][i]   	= b==1 ? -f[2][i]    : 	f[1][i] ;
-			f[0][i]    	= b==1 ? -f[2][i]    : 	f[1][i] ;   
-			f[ssx+1][i] = b==1 ? -f[ssx][i]  : 	f[ssx][i] ;   
-		}
-		
-		// Border-line 0 and ssy+1 are being set   
-		for (int i=1 ; i<=ssx ; i++ ) { 
-			f[i][1]  	= b==2 ? -f[i][2]    : 	f[i][1]; 
-			f[i][0]  	= b==2 ? -f[i][2]    : 	f[i][1] ; 
-			f[i][ssy+1] = b==2 ? -f[i][ssy]  : 	f[i][ssy] ; 
-		} 
-		//Corners - average between both direct neighbors
-		f[0][0]	= 0.5f * (f[1][0]      + f[0][1]); 
-		f[0][ssy+1] 	= 0.5f * (f[1][ssy+1]   + f[0][ssy]); 
-		f[ssx+1][0] 	= 0.5f * (f[ssx][0]     + f[ssx+1][1]); 
-		f[ssx+1][ssy+1]	= 0.5f * (f[ssx][ssy+1] + f[ssx+1][ssy]); 
-		
-	} 
-	
-	
 	public void setBounds (int b, float[][] f){
 		
 		// b=0 central data neuman boundary
@@ -765,14 +815,18 @@ public class FluidSolver {
 		// sides 	= user defined wind
 		if (b==1){
 			for (int i=1 ; i<=ssy ; i++ ) { 
-				f[1][i]    = -f[2][i];
+				//f[1][i]    = -f[2][i];
 				f[0][i]    = wind;   
+				f[1][i]    = wind; 
 				f[ssx+1][i] = wind; 
+				f[ssx][i] = wind; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
-				f[i][1]   =  f[i][1]; 
-				f[i][0]   =  f[i][1]; 
-				f[i][ssy+1] =  f[i][ssy]; 
+				f[i][1]   =  0; 
+				f[i][0]   =  0; 
+				
+				f[i][ssy+1] =  f[i][ssy+1]; 
+				
 			}
 		}
 		
@@ -782,19 +836,58 @@ public class FluidSolver {
 		// sides 	= zero
 		if (b==2){
 			for (int i=1 ; i<=ssy ; i++ ) { 
-				f[0][i]     = 0;   
-				f[ssx+1][i] = 0;  
+				f[0][i]   = 0; 
+				f[1][i]   = 0; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
-				f[i][1]   = -f[i][2]; 
-				f[i][0]   = -f[i][2]; 
-				f[i][ssy+1] = -f[i][ssy]; 
+				f[i][1]   = 0; 
+				f[i][0]   = 0; 
+				f[i][ssy] = 0; 
+				f[i][ssy+1] = 0; 
+				 
 			}
 		}
 		
-		// b=3 central data no slip
+		// b=3 potential temp
+		// set to initial values
+		// bottom noise
 		if (b==3){
+			for(int i= 0; i<ssx+2; i++){
+				f[i][0] = 		PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*20+t0; 
+				f[i][1] = f[i][0];
+				f[i][ssy+1] = 	(float) (absT[ssy+1] * Math.pow( (100/absP[ssy+1]) , 0.286 ) );  
+			}
+			for(int j= 0; j<ssy+2; j++){
+				f[0][j] = 		(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
+				f[ssx+1][j] = 	(float) (absT[j] * Math.pow( (100/absP[j]) , 0.286));  
+			}
 			
+		}
+		
+		// b=4 water vapor
+		// periodic sides
+		// top = 0
+		// bottom = noise
+		if (b==4){
+			for(int i= 0; i<ssx+2; i++){
+				f[i][ssy+1] = 0;  
+				f[i][0] = 	PerlinNoise.perlinNoise(i, 50000000+time*0.8f, 0.51f, 10f, 1f)*1f; 
+				f[i][1] = f[i][0];
+			}
+		}
+		// b=5 cloud water
+		// all to 0
+		if (b==5){
+			for (int i=0 ; i<ssy+2 ; i++ ) { 
+				f[0][i]     = 0;
+				f[1][i]     = 0;
+				f[ssx+1][i] = 0;
+			}
+			for (int i=0 ; i<ssx+2 ; i++ ) { 
+				f[i][0]   = 0; 
+				f[i][1]   = 0; 
+				f[i][ssy+1] = 0; 
+			}
 		}
 		
 	}
@@ -808,11 +901,15 @@ public class FluidSolver {
      **/
 	public float interpolate(float xpos, float ypos, float[][] f){
 		
-		//Boarder Conditions
+		//Boarder Conditions - not necessary!?
 		if (xpos<0.5){xpos=0.5f;}
 		if (xpos>ssx+0.5){xpos=ssx+0.5f;}
 		if (ypos<0.5){ypos=0.5f;}
 		if (ypos>ssy+0.5){ypos=ssy+0.5f;}
+		//if (xpos<1){ypos=1f;}
+		//if (xpos>=ssx+1){ypos=ssx+0.999999999999f;}
+		//if (ypos<1){ypos=1f;}
+		//if (ypos>=ssy+1){ypos=ssy+0.999999999999f;}
 		
 		// Sample positions
 		x1 = (int) xpos;
@@ -823,6 +920,47 @@ public class FluidSolver {
 		// Distances
 		dx = xpos%1;
 		dy = ypos%1;
+		//System.out.println(x1+" "+x2+" "+y1+" "+y2);
+		// Interpolated Value
+		return  	(1-dx) *( 	f[x1][y1]*(1-dy) 	+ 	f[x1][y2]*dy  	)
+					+  dx  *(	f[x2][y1]*(1-dy)	+  	f[x2][y2]*dy  	);
+		
+
+		
+	}
+	
+	
+	public float interpolatePer(float xpos, float ypos, float[][] f){
+		
+		// Position Particle over boarder
+		if(xpos<(1)){		xpos = (ssx+1) - (1-xpos);}
+		else if(xpos>=((ssx+1))){	xpos = 1 + ( xpos - (ssx+1) );}
+		
+		// Sample positions
+		x1 = (int) Math.floor(xpos);		
+		x2 = x1+1;		
+		
+		//System.out.println("x "+x1);
+		//System.out.println("x2 "+x2);
+		
+		//if particle is on boarder cell (between ssx and ssx+1)
+		if (xpos>ssx){
+			//System.out.println(xpos+" "+ypos);
+		
+			x1 = ssx;
+			x2 = 1;
+		}
+		//System.out.println(xpos);
+		if (ypos<1){ypos=1;} 
+		if (ypos>=ssy+1){ypos=(ssy+0.999999999999f);}
+		
+		y1 = (int) Math.floor(ypos);
+		y2 = y1+1;
+		
+		// Distances
+		dx = (float) (xpos-Math.floor(xpos));//xpos%1;
+		dy = (float) (ypos-Math.floor(ypos));//ypos%1;
+		
 		
 		// Interpolated Value
 		return  	(1-dx) *( 	f[x1][y1]*(1-dy) 	+ 	f[x1][y2]*dy  	)
@@ -831,6 +969,9 @@ public class FluidSolver {
 
 		
 	}
+	
+	
+	
 	
 	
 	/**
@@ -842,18 +983,21 @@ public class FluidSolver {
 	 */
 	public float[][] evaluate(float x, float y, float[][] f){
 		
-		float[][] mapped = new float[(int) x][(int) y];
+		float[][] mapped = new float[(int) Math.floor(x)][(int) Math.floor(y)];
 				
 		//float xscale=((this.ssx)/x);
 		//float yscale=((this.ssy)/y);
 		
-		for(int i=1; i<x; i++){
-			for(int j=1; j<y; j++){
+		for(int i=0; i<x; i++){
+			for(int j=0; j<y; j++){
 				// calc Sampleposition
 				//float xpos= xscale*i;
 				//float ypos= yscale*j;
 				// interpolate at [xpos,ypos]
-				mapped[i][j]= interpolate(1/scale*i,1/scale*j,f);	
+				if(i==0){
+					i=0;
+				}
+				mapped[i][j]= f[(int) (1/scale*i+1)][(int) (1/scale*j+1)];//interpolate(1/scale*i+1,1/scale*j+1,f);	
 			}
 		}
 		return mapped;

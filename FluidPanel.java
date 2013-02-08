@@ -11,9 +11,12 @@ public class FluidPanel extends JPanel{
 	
 	static BufferedImage img;
 	static Graphics2D onimg;
-	static float[][] pixelField,curlField, u,v;
+	static float[][] pixelField1,pixelField2, curlField, u,v;
 	static FluidSolver fs;
 	static int sx,sy,ssx,ssy;
+	static float scaleOut;
+	static float mapScale;
+	static int qc,qv;
 	
 	public FluidPanel(FluidSolver f){
 		//fs=f;
@@ -22,11 +25,16 @@ public class FluidPanel extends JPanel{
 		ssx=FluidViewer.ssx;
 		ssy=FluidViewer.ssy;
 		
+		scaleOut= FluidViewer.scaleOut;
 		
-		pixelField = new float[sx][sy];
+		
+		pixelField1 = new float[sx][sy];
+		pixelField2 = new float[sx][sy];
+		
 		curlField = new float[sx][sy];
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
+		
 
 	}
 	
@@ -42,35 +50,54 @@ public class FluidPanel extends JPanel{
 	
 		// BiLinear interpolation SimGrid to Pixels
 				if(!FluidViewer.dispVort)
-					pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.qv);
-					//pixelField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.d);
+					pixelField1 = evaluate(FluidViewer.fs.qv);
+					mapScale= 1f;
+					pixelField2 = evaluate(FluidViewer.fs.qc);
+					
 				if(FluidViewer.dispVort)
-					curlField=FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.vorticity);
+					curlField=evaluate(FluidViewer.fs.vorticity);
 				
 				onimg.setColor(Color.red);
-				u = FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.u);
-				v = FluidViewer.fs.evaluate(sx,sy,FluidViewer.fs.v);
+				u = evaluate(FluidViewer.fs.u);
+				v = evaluate(FluidViewer.fs.v);
 				
 				WritableRaster raster= img.getRaster();
 				
 				// output Pixel Field
-				
 				for(int i=0; i<sx; i++){
 					for(int j=0; j<sy; j++){
 					
 						int v =(int)((5*255*curlField[i][sy-1-j]));
 						v = v>254 ? 255:v; 
 						
-						//invert Y output
-						int c =(int)((1-pixelField[i][sy-1-j])*255);
-						c = c<0 ? 0:c; 
-
+						// cloud vapor
+						qv =(int)((4*pixelField1[i][sy-1-j])*255);
+						qv = qv<0 ? 0:qv; 
+						
+						//cloud water
+						qc =(int)((110*pixelField2[i][sy-1-j])*255);
+						qc = qc<0 ? 0:qc; 
+						
+					
+						
+						// Background Color
+					 	
+						int[] d = new int[3];	
+						d[0]=51; d[1]=102; d[2]=153; 
+						
+						//qc=0;
+						
+						
+						//d[0]=d[1]=d[2]=0; 
+						
+						d[0] = Math.min(255, d[0]+qc);
+						d[1] = Math.min(255, d[1]+qc+qv);
+						d[2] = Math.min(255, d[2]+qc);
+						
+						
+						if(FluidViewer.dispVort){	d[0]=d[1]=d[2]=v; }	
 				
-				int[] d ={c,c,c};
-				
-				if(FluidViewer.dispVort){	d[0]=d[1]=d[2]=v; }	
-				
-				raster.setPixel(i,j,d);	
+						raster.setPixel(i,j,d);	
 			}
 		}
 		
@@ -98,21 +125,52 @@ public class FluidPanel extends JPanel{
 		
 		if(FluidViewer.dispSteps){
 		// Display frame number
-		onimg.setColor(Color.black);
+		onimg.setColor(Color.magenta);
 		onimg.drawString("Frame:"+FluidViewer.fs.step,8,15);
 		}
 		// image on Panel
 		g.drawImage(img,0,0,this);
+		
 	}
 
 	
-	// linearisierung NUR FÜR PIXELFIELD!!! nicht sim grid
-	//public static int plin(int i, int j){
-		//return ((i)+(sx)*(j));
-	//}
-	//public static int flin(int i, int j){
-	//	return ((i)+(ssx+2)*(j));
-	//}
+	
+	
+	
+	
+	
+	
+	public float[][] evaluate(float[][] f){
+		float[][] mapped = new float[sx][sy];
+		
+		for(int i=0; i<sx; i++){
+			for(int j=0; j<sy; j++){
+				mapped[i][j]= interpolate((float)(i/scaleOut+1),(float) (j/scaleOut+1),f); //f[(int) (i/scaleOut+1)][(int) (j/scaleOut+1)];	
+			}
+		}
+		return mapped;
+	}
+	
+	
+	public float interpolate(float xpos, float ypos, float[][] f){
+		// Sample positions
+		int x1 = (int) Math.floor(xpos);
+		int x2 = x1+1;
+		int y1 = (int) Math.floor(ypos);
+		int y2 = y1+1;
+		// Distances
+		float dx = (float) (xpos-Math.floor(xpos));
+		float dy = (float) (ypos-Math.floor(ypos));
+		// Interpolated Value
+		return  	(1-dx) *( 	f[x1][y1]*(1-dy) 	+ 	f[x1][y2]*dy  	)
+					+  dx  *(	f[x2][y1]*(1-dy)	+  	f[x2][y2]*dy  	);
+		
+
+		
+	}
+	
+	
+	
 
 }
 		
