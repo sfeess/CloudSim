@@ -11,7 +11,7 @@ public class FluidPanel extends JPanel{
 	
 	static BufferedImage img;
 	static Graphics2D onimg;
-	static float[][] pixelField1,pixelField2, curlField, u,v;
+	static float[][] pixelField1,pixelField2, ptField, u,v;
 	static FluidSolver fs;
 	static int sx,sy,ssx,ssy;
 	static float scaleOut;
@@ -31,7 +31,7 @@ public class FluidPanel extends JPanel{
 		pixelField1 = new float[sx][sy];
 		pixelField2 = new float[sx][sy];
 		
-		curlField = new float[sx][sy];
+		ptField = new float[sx][sy];
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
 		
@@ -55,7 +55,7 @@ public class FluidPanel extends JPanel{
 					pixelField2 = evaluate(FluidViewer.fs.qc);
 					
 				if(FluidViewer.dispVort)
-					curlField=evaluate(FluidViewer.fs.vorticity);
+					ptField=evaluate(FluidViewer.fs.pt);
 				
 				onimg.setColor(Color.red);
 				u = evaluate(FluidViewer.fs.u);
@@ -67,15 +67,15 @@ public class FluidPanel extends JPanel{
 				for(int i=0; i<sx; i++){
 					for(int j=0; j<sy; j++){
 					
-						int v =(int)((5*255*curlField[i][sy-1-j]));
-						v = v>254 ? 255:v; 
+						int v = (int) ptField[i][sy-1-j];
+						//v = v>254 ? 255:v; 
 						
 						// cloud vapor
-						qv =(int)((4*pixelField1[i][sy-1-j])*255);
+						qv =(int)((0.5f*pixelField1[i][sy-1-j])*255);
 						qv = qv<0 ? 0:qv; 
 						
 						//cloud water
-						qc =(int)((110*pixelField2[i][sy-1-j])*255);
+						qc =(int)((2*pixelField2[i][sy-1-j])*255);
 						qc = qc<0 ? 0:qc; 
 						
 					
@@ -95,7 +95,11 @@ public class FluidPanel extends JPanel{
 						d[2] = Math.min(255, d[2]+qc);
 						
 						
-						if(FluidViewer.dispVort){	d[0]=d[1]=d[2]=v; }	
+						if(FluidViewer.dispVort){	
+							d[0]=heatColor(v).getRed();
+							d[1]=heatColor(v).getGreen();
+							d[2]=heatColor(v).getBlue();
+						}	
 				
 						raster.setPixel(i,j,d);	
 			}
@@ -166,6 +170,51 @@ public class FluidPanel extends JPanel{
 					+  dx  *(	f[x2][y1]*(1-dy)	+  	f[x2][y2]*dy  	);
 		
 
+		
+	}
+	
+	public static Color heatColor(float temp){
+		
+		Color c1 = new Color(50, 0, 255);
+		Color c2 = new Color(0, 230, 160);
+		Color c3 = new Color(255, 255, 0);
+		Color c4 = new Color(180, 0, 50);
+		Color c5 = new Color(255, 0, 255);
+		
+		float  p[] = {275f,300f,350f,390f,450};
+		
+		if(temp<p[1]){
+			c1 =  new Color(
+							(int) (c1.getRed()    +  ( ((temp-p[0])/(p[1]-p[0]))  * (c2.getRed()  -c1.getRed() ) )), 
+							(int) (c1.getGreen()  +  ( ((temp-p[0])/(p[1]-p[0]))  * (c2.getGreen()-c1.getGreen() ) )), 
+							(int) (c1.getBlue()   +  ( ((temp-p[0])/(p[1]-p[0]))  * (c2.getBlue() -c1.getBlue() ) ))
+							); 
+		}
+		else if(temp<p[2]){
+			c1 =  new Color(
+							(int) (c2.getRed()    +  ( ((temp-p[1])/(p[2]-p[1]))  * (c3.getRed()  -c2.getRed() ) )), 
+							(int) (c2.getGreen()  +  ( ((temp-p[1])/(p[2]-p[1]))  * (c3.getGreen()-c2.getGreen() ) )), 
+							(int) (c2.getBlue()   +  ( ((temp-p[1])/(p[2]-p[1]))  * (c3.getBlue() -c2.getBlue() ) ))
+							); 
+		}
+		else if(temp<p[3]){
+			c1 =  new Color(
+							(int) (c3.getRed()    +  ( ((temp-p[2])/(p[3]-p[2]))  * (c4.getRed()-c3.getRed() ) )),
+							(int) (c3.getGreen()  +  ( ((temp-p[2])/(p[3]-p[2]))  * (c4.getGreen()-c3.getGreen() ) )),
+							(int) (c3.getBlue()   +  ( ((temp-p[2])/(p[3]-p[2]))  * (c4.getBlue() -c3.getBlue() ) ))
+							); 
+		}
+		else if(temp<p[4]){
+			c1 =  new Color(
+							(int) (c4.getRed()    +  ( ((temp-p[3])/(p[4]-p[3]))  * (c5.getRed()  -c4.getRed() ) )), 
+							(int) (c4.getGreen()  +  ( ((temp-p[3])/(p[4]-p[3]))  * (c5.getGreen()-c4.getGreen() ) )), 
+							(int) (c4.getBlue()   +  ( ((temp-p[3])/(p[4]-p[3]))  * (c5.getBlue() -c4.getBlue() ) ))
+							); 
+		}
+		
+		else c1= new Color(255,0,0);
+		
+		return c1;
 		
 	}
 	

@@ -62,16 +62,16 @@ public class FluidSolver {
 		this.sy = (int) (ssy*scale);
 		this.size = (ssx+2)*(ssy+2);
 		this.dt = dt;
-		reset();
+		init();
 	}
 	
 	
 	/** Reset the FluidSolver => Set all fields to zero
 	 * and set initial Field values
 	 */
-	public void reset(){
+	public void init(){
 		
-		step=0;
+		
 		
 		
 		// Fluid variables
@@ -99,24 +99,15 @@ public class FluidSolver {
 		absP = 	new float[ssy+2];
 		
 		
-		// Set Fields to Zero
-		//************************************************************
-		for(int x= 0; x<ssx+2; x++){
-			for(int y= 0; y<ssy+2; y++){
-				u[x][y] = uOld[x][y] = v[x][y] = vOld[x][y] = d[x][y] = dOld[x][y] = vorticity[x][y] = qc[x][y] = 0.0f;  // = out[x]
-			}
-		}
 		// Initialize Fluid 
 		//************************************************************
-		wind = 0.1f;
+		wind = 0.8f;
 		diff = 0.0000f;
 		visc = 0.000000000f;
 		
 		//v = Field.constField(ssx,ssy,1f);
 		//u = Field.boxField(ssx,ssy,1f);
 		//d = Field.boxField(ssx,ssy,1f);
-		//dOld = Field.boxField(ssx,ssy,1f);
-		
 		
 		// Initialize Cloud constants
 		//************************************************************
@@ -125,15 +116,32 @@ public class FluidSolver {
 		grav = 		9.81f;		// gravitational acceleration (m/s²)
 		lh = 		2501;		// Latent heat of vaporization of water (J/kg)
 		cp = 		1005;		// specific heat cpapcity J/(kg K)
-
+		
+		
 		// user defined
-		maxAlt = 	6000;		// altitude in meter on top of sim grid
+		maxAlt = 	1000;		// altitude in meter on top of sim grid
 		tlr = 		0.6f; 		// Kelvin per 100 meter between 0.55 and 0.99
 			tlr /= 	100; 		// Kelvin per 1 meter
 		t0 = 		295;		// temp on ground in Kelvin
-		hum = 		0.2f;		// humidty
-		buoyancy =  2f;
+		hum = 		0.6f;		// humidty
+		buoyancy =  0.8f;
 		vort = 		0.4f;
+		
+		reset();
+	}	
+		
+		
+	public void reset(){		
+		
+		step=0;
+		
+		// Set Fields to Zero
+		//************************************************************
+		for(int x= 0; x<ssx+2; x++){
+			for(int y= 0; y<ssy+2; y++){
+				u[x][y] = uOld[x][y] = v[x][y] = vOld[x][y] = d[x][y] = dOld[x][y] = vorticity[x][y] = qc[x][y] = 0.0f;  // = out[x]
+			}
+		}
 		
 		// Initialize absolute Temp lookup
 		//************************************************************
@@ -148,7 +156,7 @@ public class FluidSolver {
 		for(int y= 0; y<ssy+2; y++){
 			float alt = ( (float)y / (float)ssy ) * maxAlt;
 			// a				
-			absP[y] = (float) (p0* Math.pow(( 1- ( (alt*tlr)/t0 ) ),9.81/(tlr*rd))) ;
+			absP[y] = (float) (p0* Math.pow(( 1- ( (alt*tlr)/t0 ) ),(9.81/(tlr*rd)) )) ;
 		}
 		
 		// Initialize pot temp
@@ -156,8 +164,9 @@ public class FluidSolver {
 		for(int i= 0; i<ssx+2; i++){
 			for(int j= 0; j<ssy+2; j++){
 				//					K                   kPa/kPa
-				pt[i][j] = (float) ( absT[j] * Math.pow( p0 / absP[j] , 0.286));  
-				ptOld[i][j] = pt[i][j];
+				
+				pt[i][j] = absT[j] * (float) ( Math.pow( (p0 / absP[j]) , 0.286));  
+				ptOld[i][j] = pt[i][j]; //absT[j] * (float) ( Math.pow( (p0 / absP[j]) , 0.286)); 
 			}
 		}
 		
@@ -172,6 +181,8 @@ public class FluidSolver {
 					qvOld[i][j] = 	qs * hum;
 			}
 		}
+		
+		
 		
 	}
 	
@@ -423,22 +434,22 @@ public class FluidSolver {
 			setBounds(b,a);
 		}
 		
+		// for pt
 		else if(b==3){
-			for (int i=1; i<=ssx; i++){
-				for (int j=1; j<=ssy; j++){
+			for (int i=0; i<=ssx; i++){
+				for (int j=0; j<=ssy; j++){
 					// x and y are in middle of the u/v valuepositions.
 					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )/2 ;
 					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )/2;
 					
 					
 					//Boarder Conditions
-					if(x<1.0){		x=1.0f;}
-					if(y<1.0){		y=1.0f;}
+					if(x<0){		x=0f;}
+					if(y<0){		y=0f;}
 					if(x>ssx+1){	x=ssx+1f;}
 					if(y>ssy+1){	y=ssy+1f;}
 					// interpolate the value of old field
-					float temp1 =(float)interpolate(x,y,aOld);
-					a[i][j] = temp1;
+					a[i][j] =(float)interpolate(x,y,aOld);
 				}
 			}
 			setBounds(b,a);
@@ -819,13 +830,10 @@ public class FluidSolver {
 				f[0][i]    = wind;   
 				f[1][i]    = wind; 
 				f[ssx+1][i] = wind; 
-				f[ssx][i] = wind; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
-				f[i][1]   =  0; 
-				f[i][0]   =  0; 
-				
-				f[i][ssy+1] =  f[i][ssy+1]; 
+				f[i][0]   =  -f[i][0]; 
+				f[i][ssy+1] =  f[i][ssy]; 
 				
 			}
 		}
@@ -833,16 +841,14 @@ public class FluidSolver {
 		// b=2 v
 		// bottom 	= noslip
 		// top 		= free slip 
-		// sides 	= zero
+		// sides 	= zero ?????????????
 		if (b==2){
 			for (int i=1 ; i<=ssy ; i++ ) { 
-				f[0][i]   = 0; 
-				f[1][i]   = 0; 
+				//f[0][i]   = 0; 
+				//f[1][i]   = 0; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
 				f[i][1]   = 0; 
-				f[i][0]   = 0; 
-				f[i][ssy] = 0; 
 				f[i][ssy+1] = 0; 
 				 
 			}
@@ -853,13 +859,14 @@ public class FluidSolver {
 		// bottom noise
 		if (b==3){
 			for(int i= 0; i<ssx+2; i++){
-				f[i][0] = 		PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*20+t0; 
-				f[i][1] = f[i][0];
+				int x = 190;
+				f[i][0] = 	PerlinNoise.perlinNoise(i, time*0.5f+5000, 0.51f, 10f, 1f)*x+t0; 
+				f[i][1]= f[i][0];
 				f[i][ssy+1] = 	(float) (absT[ssy+1] * Math.pow( (100/absP[ssy+1]) , 0.286 ) );  
 			}
 			for(int j= 0; j<ssy+2; j++){
-				f[0][j] = 		(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
-				f[ssx+1][j] = 	(float) (absT[j] * Math.pow( (100/absP[j]) , 0.286));  
+				f[0][j] 	= 	(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
+				f[ssx+1][j] = 	(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
 			}
 			
 		}
@@ -871,8 +878,8 @@ public class FluidSolver {
 		if (b==4){
 			for(int i= 0; i<ssx+2; i++){
 				f[i][ssy+1] = 0;  
-				f[i][0] = 	PerlinNoise.perlinNoise(i, 50000000+time*0.8f, 0.51f, 10f, 1f)*1f; 
-				f[i][1] = f[i][0];
+				f[i][0] = 	PerlinNoise.perlinNoise(i, 50000000+time*0.4f, 0.51f, 10f, 1f)*1f; 
+				f[i][1]= f[i][0];
 			}
 		}
 		// b=5 cloud water
@@ -880,12 +887,10 @@ public class FluidSolver {
 		if (b==5){
 			for (int i=0 ; i<ssy+2 ; i++ ) { 
 				f[0][i]     = 0;
-				f[1][i]     = 0;
 				f[ssx+1][i] = 0;
 			}
 			for (int i=0 ; i<ssx+2 ; i++ ) { 
 				f[i][0]   = 0; 
-				f[i][1]   = 0; 
 				f[i][ssy+1] = 0; 
 			}
 		}

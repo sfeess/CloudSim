@@ -29,7 +29,6 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	//Menu Stuff
 	JMenuItem reset;
 	JMenuItem close;
-	JMenuItem values;
 	JMenuItem debug;
 	JMenuItem vectors;
 	JMenuItem stepcount;
@@ -42,12 +41,13 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	 static JLabel lblDebugvalue5;
 	 static JLabel lblDebugvalue6;
 	 static JLabel lblDebugPos;
+	 static JCheckBox cbox_WriteTxt, cbox_WriteImg;
 	 
 	JButton btnPlay = new JButton();
 	JButton btnPause = new JButton();
 	JButton btnStop = new JButton();
 	
-	static boolean dispVec,dispVal,dispVort,dispSteps,mDens,mVel,dispDebug, dispSettings, play, stop;
+	static boolean dispVec,dispVal,dispVort,dispSteps,mDens,mVel,dispDebug, dispSettings, play, stop, writeImg, writeTxt;
 	
 	JPanel contentPanel;
 	
@@ -79,8 +79,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 				
 				fp.repaint();
 				// Output Data
-				//WriteData.imgOut();
-				//WriteData.boxValuesOut(10,15,0,5);
+				if(writeImg)WriteData.imgOut();
+				if(writeTxt)WriteData.boxValuesOut(10,15,0,5);
 			}
 			if(dispDebug)refreshDebug(mx,my);
 			
@@ -111,7 +111,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
 		dispVec=mVel=dispSteps=stop=true;
-		dispVal=mDens=dispVort=dispDebug=dispVec=dispSettings=play=false;
+		dispVal=mDens=dispVort=dispDebug=dispVec=dispSettings=play= writeImg= writeTxt=false;
 		
 		time = System.currentTimeMillis();
 	}
@@ -119,7 +119,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	
 	// Constructor
 	public FluidViewer(){
-		JFrame frame = new JFrame("Fluid Viewer");
+		JFrame frame = new JFrame("Cloud Simulation");
 		frame.setLocation(100,100);
 		frame.setSize(sx+180,sy+190); 
 		frame.getContentPane().setLayout(null);
@@ -127,7 +127,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setBackground(new Color(105, 105, 105));
 		
-		frame.setIconImage(new ImageIcon("cloud-icon.png").getImage());
+		frame.setIconImage(new ImageIcon(getClass().getClassLoader().getResource("img/cloud-icon.png")).getImage());
+		
 		
 		JPanel topPanel = new JPanel();
 		topPanel.setBounds(0, 0, sx+500, 21);
@@ -142,25 +143,45 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		
 		
 		btnPlay.setBounds((int)(sx/2)-56, 5, 34, 34);
-		btnPlay.setIcon(new ImageIcon("img\\play.png"));
+		btnPlay.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/play.png")));
 		btnPlay.setBorderPainted(false);
 		btnPlay.addActionListener(this);
 		btnPlay.addMouseListener(this);
 		bottomPanel.add(btnPlay);
 		
 		btnPause.setBounds((int)(sx/2)-17, 5, 34, 34);
-		btnPause.setIcon(new ImageIcon("img\\pause.png"));
+		btnPause.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/pause.png")));
 		btnPause.setBorderPainted(false);
 		btnPause.addActionListener(this);
 		btnPause.addMouseListener(this);
 		bottomPanel.add(btnPause);
 		
-		btnStop.setIcon(new ImageIcon("img\\stop.png"));
+		btnStop.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/stop.png")));
 		btnStop.setBounds((int)(sx/2)+22, 5, 34, 34);
 		btnStop.setBorderPainted(false);
 		btnStop.addActionListener(this);
 		btnStop.addMouseListener(this);
 		bottomPanel.add(btnStop);
+		
+		cbox_WriteImg = new JCheckBox("Write Images");
+		cbox_WriteImg.setFont(new Font("Monospaced", Font.PLAIN, 11));
+		cbox_WriteImg.setForeground(Color.LIGHT_GRAY);
+		cbox_WriteImg.setBackground(Color.DARK_GRAY);
+		cbox_WriteImg.setBounds(6, 95, 178, 23);
+		bottomPanel.add(cbox_WriteImg);
+		
+		cbox_WriteTxt = new JCheckBox("Write Data Files");
+		cbox_WriteTxt.setFont(new Font("Monospaced", Font.PLAIN, 11));
+		cbox_WriteTxt.setForeground(Color.LIGHT_GRAY);
+		cbox_WriteTxt.setBackground(Color.DARK_GRAY);
+		cbox_WriteTxt.setBounds(6, 69, 178, 23);
+		bottomPanel.add(cbox_WriteTxt);
+		
+		JLabel lblOutputOptions = new JLabel("Output Options:");
+		lblOutputOptions.setFont(new Font("Monospaced", Font.PLAIN, 11));
+		lblOutputOptions.setForeground(Color.WHITE);
+		lblOutputOptions.setBounds(6, 48, 115, 14);
+		bottomPanel.add(lblOutputOptions);
 		 
 		
 		fp.addMouseListener(this);
@@ -180,15 +201,13 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	    close = new JMenuItem("Close");
 	    close.addActionListener(this);
 	    
-	    debug = new JMenuItem("Display Settings");
+	    debug = new JMenuItem("Debug Values");
 	    debug.addActionListener(this);
 	    vectors = new JMenuItem("Vectors");
 	    vectors.addActionListener(this);
-	    values = new JMenuItem("Velocity Values");
-	    values.addActionListener(this);
 	    stepcount = new JMenuItem("Frames");
 	    stepcount.addActionListener(this);
-	    vort = new JMenuItem("Vorticity");
+	    vort = new JMenuItem("Temperature");
 	    vort.addActionListener(this);
 	    
 	    paintVel = new JMenuItem("paint Velocity");
@@ -205,7 +224,6 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	    file.add(close);
 	    display.add(debug);
 	    display.add(vectors);
-	    display.add(values);
 	    display.add(stepcount);
 	    display.add(vort);
 	    action.add(paintVel);
@@ -241,7 +259,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtAlt.setForeground(Color.WHITE);
 	        txtAlt.setBackground(Color.GRAY);
 	        txtAlt.setHorizontalAlignment(SwingConstants.LEFT);
-	        txtAlt.setText("6000");
+	        txtAlt.setText(String.valueOf(fs.maxAlt));
 	        GridBagConstraints gbc_txtAlt = new GridBagConstraints();
 	        gbc_txtAlt.fill = GridBagConstraints.HORIZONTAL;
 	        gbc_txtAlt.insets = new Insets(5, 5, 5, 5);
@@ -264,7 +282,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtHum = new JTextField();
 	        txtHum.setForeground(Color.WHITE);
 	        txtHum.setBackground(Color.GRAY);
-	        txtHum.setText("0.5");
+	        txtHum.setText(String.valueOf(fs.hum));
 	        GridBagConstraints gbc_txtHum = new GridBagConstraints();
 	        gbc_txtHum.fill = GridBagConstraints.HORIZONTAL;
 	        gbc_txtHum.insets = new Insets(0, 5, 5, 5);
@@ -288,7 +306,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtTlr = new JTextField();
 	        txtTlr.setForeground(Color.WHITE);
 	        txtTlr.setBackground(Color.GRAY);
-	        txtTlr.setText("0.6");
+	        txtTlr.setText(String.valueOf(fs.tlr));
 	        GridBagConstraints gbc_txtTlr = new GridBagConstraints();
 	        gbc_txtTlr.insets = new Insets(0, 5, 5, 5);
 	        gbc_txtTlr.fill = GridBagConstraints.HORIZONTAL;
@@ -324,7 +342,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtVort.setForeground(Color.WHITE);
 	        txtVort.setBackground(Color.GRAY);
 	        txtVort.setHorizontalAlignment(SwingConstants.LEFT);
-	        txtVort.setText("0.4");
+	        txtVort.setText(String.valueOf(fs.vort));
 	        GridBagConstraints gbc_txtVort = new GridBagConstraints();
 	        gbc_txtVort.fill = GridBagConstraints.HORIZONTAL;
 	        gbc_txtVort.insets = new Insets(0, 5, 5, 5);
@@ -350,7 +368,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtBuoy.setForeground(Color.WHITE);
 	        txtBuoy.setBackground(Color.GRAY);
 	        txtBuoy.setHorizontalAlignment(SwingConstants.LEFT);
-	        txtBuoy.setText("1.0");
+	        txtBuoy.setText(String.valueOf(fs.buoyancy));
 	        GridBagConstraints gbc_txtBuoy = new GridBagConstraints();
 	        gbc_txtBuoy.insets = new Insets(0, 5, 5, 5);
 	        gbc_txtBuoy.fill = GridBagConstraints.HORIZONTAL;
@@ -374,7 +392,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtDt = new JTextField();
 	        txtDt.setForeground(Color.WHITE);
 	        txtDt.setBackground(Color.GRAY);
-	        txtDt.setText("0.5");
+	        txtDt.setText(String.valueOf(fs.dt));
 	        GridBagConstraints gbc_txtDt = new GridBagConstraints();
 	        gbc_txtDt.insets = new Insets(0, 5, 5, 5);
 	        gbc_txtDt.fill = GridBagConstraints.HORIZONTAL;
@@ -477,6 +495,12 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
         
         frame.setVisible(true);
 	}
+	
+	public static void reset(){
+		fs.reset();
+		writeTxt = cbox_WriteTxt.isSelected();
+		writeImg = cbox_WriteTxt.isSelected();
+	}
 
 	public static void refreshDebug(int x, int y){
 		//x=40;		y=0;		
@@ -504,8 +528,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 			txtDt.setText(String.valueOf(fs.dt));
 		}
 		else if(object.getSource() == txtTlr){
-			fs.tlr = textToFloat(txtTlr.getText(), 0.55f, 0.99f, fs.tlr, 100);
-			txtTlr.setText(String.valueOf(fs.tlr*100));
+			fs.tlr = textToFloat(txtTlr.getText(), 0.0055f, 0.0099f, fs.tlr, 1);
+			txtTlr.setText(String.valueOf(fs.tlr));
 		}
 		else if(object.getSource() == txtHum){
 			fs.hum = textToFloat(txtHum.getText(), 0,1, fs.hum,1);
@@ -527,15 +551,17 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		// Button Input
 		//*****************************************************************
 		else if(object.getSource() == btnPlay ){
+			if(stop)reset();
 			play = true;
 			stop = false;
+			
 		}
 		else if(object.getSource() == btnPause ){
 			play = false;
 			stop = false;
 		}
 		else if(object.getSource() == btnStop ){
-			fs.reset();
+			reset();
 			play = false;
 			stop = true;
 		}
@@ -543,7 +569,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		// Menu Input
 		//*****************************************************************
 		else if (object.getSource() == reset){
-			fs.reset();
+			reset();
 		}
 		else if (object.getSource() == close){
     	   System.exit(0);
@@ -552,9 +578,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
     	   dispDebug= !dispDebug;
           
 		}
-		else if (object.getSource() == values){
-           dispVal=!dispVal; 
-		}
+		
 		else if (object.getSource() == vectors){
     	   dispVec=!dispVec; 
 		}
@@ -563,6 +587,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		}
 		else if (object.getSource() == vort){
     	   dispVort=!dispVort;
+    	   if(dispVort) vort.setText("Clouds");
+    	   else vort.setText("Temperature");
 		}
 		if (object.getSource() == paintVel){
     	   mVel=!mVel;
@@ -599,9 +625,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	public void mouseEntered(MouseEvent object) {
 		// Button animation
 		//*************************************************
-		if(object.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon("img\\stop_hov.png"));	}
-		if(object.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon("img\\play_hov.png"));	}
-		if(object.getSource() == btnPause ){	btnPause.setIcon(new ImageIcon("img\\pause_hov.png"));	}
+		if(object.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/stop_hov.png")));	}
+		if(object.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/play_hov.png")));	}
+		if(object.getSource() == btnPause ){	btnPause.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/pause_hov.png")));	}
 		
 	}
 
@@ -609,9 +635,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	public void mouseExited(MouseEvent object) {
 		// Button animation
 		//*************************************************
-		if(object.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon("img\\stop.png"));	}
-		if(object.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon("img\\play.png"));	}
-		if(object.getSource() == btnPause ){	btnPause.setIcon(new ImageIcon("img\\pause.png"));	}
+		if(object.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/stop.png")));	}
+		if(object.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/play.png")));	}
+		if(object.getSource() == btnPause ){	btnPause.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/pause.png")));	}
 		
 	}
 
@@ -619,9 +645,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	public void mousePressed(MouseEvent obj) {
 		// Button animation
 		//*************************************************
-		if(obj.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon("img\\stop_dwn.png"));	}
-		if(obj.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon("img\\play_dwn.png"));	}
-		if(obj.getSource() == btnPause ){		btnPause.setIcon(new ImageIcon("img\\pause_dwn.png"));	}
+		if(obj.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/stop_dwn.png")));	}
+		if(obj.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/play_dwn.png")));	}
+		if(obj.getSource() == btnPause ){		btnPause.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/pause_dwn.png")));	}
 		
 		mx=my=0;
 		mxOld = (int) (obj.getX()/scaleOut);
