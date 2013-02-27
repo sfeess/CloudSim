@@ -71,11 +71,11 @@ public class FluidPanel extends JPanel{
 						//v = v>254 ? 255:v; 
 						
 						// cloud vapor
-						qv =(int)((0.5f*pixelField1[i][sy-1-j])*255);
+						qv =(int)((10f*pixelField1[i][sy-1-j])*255);
 						qv = qv<0 ? 0:qv; 
 						
 						//cloud water
-						qc =(int)((2*pixelField2[i][sy-1-j])*255);
+						qc =(int)((100*pixelField2[i][sy-1-j])*255);
 						qc = qc<0 ? 0:qc; 
 						
 					
@@ -181,7 +181,7 @@ public class FluidPanel extends JPanel{
 		Color c4 = new Color(180, 0, 50);
 		Color c5 = new Color(255, 0, 255);
 		
-		float  p[] = {275f,300f,350f,390f,450};
+		float  p[] = {200f,250f,300f,350f,450};
 		
 		if(temp<p[1]){
 			c1 =  new Color(

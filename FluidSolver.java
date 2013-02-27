@@ -101,7 +101,7 @@ public class FluidSolver {
 		
 		// Initialize Fluid 
 		//************************************************************
-		wind = 0.8f;
+		wind = 0.0f;
 		diff = 0.0000f;
 		visc = 0.000000000f;
 		
@@ -119,8 +119,8 @@ public class FluidSolver {
 		
 		
 		// user defined
-		maxAlt = 	1000;		// altitude in meter on top of sim grid
-		tlr = 		0.6f; 		// Kelvin per 100 meter between 0.55 and 0.99
+		maxAlt = 	6000;		// altitude in meter on top of sim grid
+		tlr = 		0.9f; 		// Kelvin per 100 meter between 0.55 and 0.99
 			tlr /= 	100; 		// Kelvin per 1 meter
 		t0 = 		295;		// temp on ground in Kelvin
 		hum = 		0.6f;		// humidty
@@ -156,7 +156,8 @@ public class FluidSolver {
 		for(int y= 0; y<ssy+2; y++){
 			float alt = ( (float)y / (float)ssy ) * maxAlt;
 			// a				
-			absP[y] = (float) (p0* Math.pow(( 1- ( (alt*tlr)/t0 ) ),(9.81/(tlr*rd)) )) ;
+			
+			absP[y] = (float) (p0* Math.pow(( 1- ( (alt*tlr)/t0 ) ),(grav/(tlr*rd)) )) ;
 		}
 		
 		// Initialize pot temp
@@ -164,8 +165,7 @@ public class FluidSolver {
 		for(int i= 0; i<ssx+2; i++){
 			for(int j= 0; j<ssy+2; j++){
 				//					K                   kPa/kPa
-				
-				pt[i][j] = absT[j] * (float) ( Math.pow( (p0 / absP[j]) , 0.286));  
+				pt[i][j] = (float) (absT[j] * ( Math.pow( (p0/absP[j]) , 0.286)));  
 				ptOld[i][j] = pt[i][j]; //absT[j] * (float) ( Math.pow( (p0 / absP[j]) , 0.286)); 
 			}
 		}
@@ -228,6 +228,9 @@ public class FluidSolver {
 		
 		project(u,v,uOld,vOld);
 		
+		buoyancy(vOld, buoyancy);
+		addSource(v,vOld);
+		
 		swapQv(); swapQc(); swapPt();
 		//copy(qv,qvOld); copy(qc,qcOld);copy(pt,ptOld);
 		advect(4, qv, qvOld, u, v);
@@ -239,8 +242,7 @@ public class FluidSolver {
 		advect(1, u, uOld, uOld, vOld);
 		advect(2, v, vOld, uOld, vOld);
 		
-		buoyancy(vOld, buoyancy);
-		addSource(v,vOld);
+		
 		
 		waterCont();
 		
@@ -436,20 +438,20 @@ public class FluidSolver {
 		
 		// for pt
 		else if(b==3){
-			for (int i=0; i<=ssx; i++){
-				for (int j=0; j<=ssy; j++){
+			for (int i=1; i<=ssx; i++){
+				for (int j=1; j<=ssy; j++){
 					// x and y are in middle of the u/v valuepositions.
-					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )/2 ;
-					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )/2;
+					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
+					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f ;
 					
 					
 					//Boarder Conditions
-					if(x<0){		x=0f;}
-					if(y<0){		y=0f;}
-					if(x>ssx+1){	x=ssx+1f;}
-					if(y>ssy+1){	y=ssy+1f;}
+					if(x<0.0){		x=0.0f;}
+					if(y<0.0){		y=0.0f;}
+					if(x>ssx+0.5){	x=ssx+0.5f;}
+					if(y>ssy+0.5){	y=ssy+0.5f;}
 					// interpolate the value of old field
-					a[i][j] =(float)interpolate(x,y,aOld);
+					a[i][j] =(float)interpolate(x-0.5f,y-0.5f,aOld);
 				}
 			}
 			setBounds(b,a);
@@ -677,26 +679,30 @@ public class FluidSolver {
 	
 	public void buoyancy(float[][] f, float k){
 		float vpt,avpt;
-		avpt=0f;
-		
-		// Calculate average temp
-		for (int i=1; i<=ssx; i++){
-			for (int j=1; j<=ssy; j++){
-				avpt += (pt[i][j] * ( 1 + 0.61f * qv[i][j]));
+		avpt = 0;
+		for (int i=0; i<=ssx; i++){
+			for (int j=0; j<=ssy; j++){
+				avpt += pt[i][j]*( 1 + 0.61f * qv[i][j]);;
+				
 			}
 		}
-		avpt = avpt / (ssx*ssy); 
+		avpt = avpt/(ssx*ssy);
 		
-		
-		for (int i=1; i<=ssx; i++){
-			for (int j=1; j<=ssy; j++){
+		for (int i=0; i<=ssx; i++){
+			for (int j=0; j<=ssy; j++){
+				
+				
+				avpt = (float) (absT[j] * ( Math.pow( (p0/absP[j]) , 0.286)))*( 1 + 0.61f * qv[i][j]); 
+
+				
 				// B = (vpt-avpt)/ avpt - (g* qc)
 				// vpt and avpt in Kelvin
 				// g = 9.81 m/s²
 				// qc in g/kg 
 				vpt = pt[i][j] * ( 1 + 0.61f * qv[i][j]);
 				f[i][j] = k*( ( (vpt-avpt) / avpt ) - 9.81f * qc[i][j] );
-			
+				d[i][j] =f[i][j];
+				
 			}
 		}
 		setBounds(2,f);
@@ -708,8 +714,8 @@ public class FluidSolver {
 		float d_qv,T,qs;
 		
 		
-		for (int i=0; i<=ssx+1; i++){
-			for (int j=0; j<=ssy+1; j++){
+		for (int i=1; i<=ssx; i++){
+			for (int j=1; j<=ssy; j++){
 				//alt=((float)j/(float)ssy)*maxAlt;
 				
 				//compute 	p(alt) in kPa
@@ -720,12 +726,14 @@ public class FluidSolver {
 				// 			L = Lapse rate in °K or °C per meter
 				//			Rd = ideal gas constant ~ 287 J/(kg K)
 				
+				exner = (float) ( Math.pow( (absP[j]/p0),0.286f )  );
+				
 				//p = (float) Math.pow(10*(1-(alt*tlr/t0)),(9.81/(tlr*rd)));
 				//
 				//compute 	T = pt[i,j]/( (^p/p)^k  )     
 				// 			with  ^p = 100kPa   k = ~0.286
 				//			T = pt[i,j]/( (100/p)^0.286)
-				T = (float) (pt[i][j]/Math.pow((p0/absP[j]),0.286));
+				T =  pt[i][j]*exner;
 				// conversion from Kelvin to Celsius
 				T -= 273.15f;
 				//
@@ -733,6 +741,8 @@ public class FluidSolver {
 				// with T in °C and P in Pa
 				//
 				// qs nicht als feld
+				
+				
 				qs = (float) ( (380.16f / (absP[j]*1000) ) * Math.exp( (17.67f * T) / (T + 243.5f) ) );
 				
 				d_qv  = Math.min(qs - qv[i][j],qc[i][j]);
@@ -740,6 +750,7 @@ public class FluidSolver {
 				qv[i][j] = qv[i][j] + d_qv;
 				qc[i][j] = qc[i][j] - d_qv;
 				
+				//if(i==30 && j ==4)System.out.println("qs="+qs+" dqv="+d_qv+" qc="+qc[i][j]+" qv="+qv[i][j]);
 				
 				
 				
@@ -754,7 +765,7 @@ public class FluidSolver {
 				// PI = Exner Function = T/pt = 
 				//_______________L_____/___cp___*________PI___________*____________C_________________________________
 				T += 273.15f;
-				exner = (float) ( Math.pow( (absP[j]/p0),0.286f )  );
+				
 				
 				pt[i][j] += (lh / ( cp * exner )) * (-d_qv);
 				
@@ -802,18 +813,17 @@ public class FluidSolver {
 	 * @param b 0=central Neumann || 1=uVel || 2=vVel || 3=potTemp || 4=waterVapor || 5=cloudWater
 	 * @param f field to set boundaries
 	 */
-	public void setBounds (int b, float[][] f){
+public void setBounds (int b, float[][] f){
 		
 		// b=0 central data neuman boundary
 		if (b==0){
-			for (int i=1 ; i<=ssx ; i++ ) { 
-				f[i][1]   = f[i][1]; 
+			for (int i=0 ; i<=ssx+1 ; i++ ) { 
 				f[i][0]   = f[i][1]; 
 				f[i][ssy+1] = f[i][ssy]; 
 				//f[flin(i,0  )]   = 0.3f; 
 				//f[flin(i,ssy+1)] = 0.3f; 
 			}
-			for (int i=1 ; i<=ssy ; i++ ) { 
+			for (int i=0 ; i<=ssy+1 ; i++ ) { 
 				f[0][i]    = f[1][i];   
 				f[ssx+1][i] = f[ssx][i];
 				
@@ -832,8 +842,9 @@ public class FluidSolver {
 				f[ssx+1][i] = wind; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
-				f[i][0]   =  -f[i][0]; 
-				f[i][ssy+1] =  f[i][ssy]; 
+				f[i][0]   =  0; 
+				
+				f[i][ssy+1] =  f[i][ssy+1]; 
 				
 			}
 		}
@@ -841,14 +852,15 @@ public class FluidSolver {
 		// b=2 v
 		// bottom 	= noslip
 		// top 		= free slip 
-		// sides 	= zero ?????????????
+		// sides 	= zero
 		if (b==2){
 			for (int i=1 ; i<=ssy ; i++ ) { 
-				//f[0][i]   = 0; 
-				//f[1][i]   = 0; 
+				f[0][i]   = 0; 
+				f[1][i]   = 0; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
-				f[i][1]   = 0; 
+				f[i][0]   = 0; 
+				f[i][ssy] = 0; 
 				f[i][ssy+1] = 0; 
 				 
 			}
@@ -859,14 +871,15 @@ public class FluidSolver {
 		// bottom noise
 		if (b==3){
 			for(int i= 0; i<ssx+2; i++){
-				int x = 190;
-				f[i][0] = 	PerlinNoise.perlinNoise(i, time*0.5f+5000, 0.51f, 10f, 1f)*x+t0; 
-				f[i][1]= f[i][0];
+				f[i][0] = t0;
+				if(i>30 && i<80)f[i][3] = t0+	PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*20f; 
+				
+				
 				f[i][ssy+1] = 	(float) (absT[ssy+1] * Math.pow( (100/absP[ssy+1]) , 0.286 ) );  
 			}
 			for(int j= 0; j<ssy+2; j++){
-				f[0][j] 	= 	(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
-				f[ssx+1][j] = 	(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
+				f[0][j] = 		(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
+				f[ssx+1][j] = 	(float) (absT[j] * Math.pow( (100/absP[j]) , 0.286));  
 			}
 			
 		}
@@ -878,8 +891,9 @@ public class FluidSolver {
 		if (b==4){
 			for(int i= 0; i<ssx+2; i++){
 				f[i][ssy+1] = 0;  
-				f[i][0] = 	PerlinNoise.perlinNoise(i, 50000000+time*0.4f, 0.51f, 10f, 1f)*1f; 
-				f[i][1]= f[i][0];
+				f[i][0] = 0;
+				//PerlinNoise.perlinNoise(i, 50000000+time*0.8f, 0.51f, 10f, 1f)*0.9f; 
+				if(i>30 && i<80)f[i][0] =0.05f;//+= 	0.00041f;
 			}
 		}
 		// b=5 cloud water
@@ -956,7 +970,7 @@ public class FluidSolver {
 			x2 = 1;
 		}
 		//System.out.println(xpos);
-		if (ypos<1){ypos=1;} 
+		if (ypos<0){ypos=0;} 
 		if (ypos>=ssy+1){ypos=(ssy+0.999999999999f);}
 		
 		y1 = (int) Math.floor(ypos);
@@ -977,35 +991,6 @@ public class FluidSolver {
 	
 	
 	
-	
-	
-	/**
-	 * Evaluate: Scales field f to the size x, y;
-	 * @param x = Targetsize X
-	 * @param y = Targetsize Y
-	 * @param f = SourceField to scale (dimensions=sx,sy) 
-	 * @return interpolated field with dimensions x,y
-	 */
-	public float[][] evaluate(float x, float y, float[][] f){
-		
-		float[][] mapped = new float[(int) Math.floor(x)][(int) Math.floor(y)];
-				
-		//float xscale=((this.ssx)/x);
-		//float yscale=((this.ssy)/y);
-		
-		for(int i=0; i<x; i++){
-			for(int j=0; j<y; j++){
-				// calc Sampleposition
-				//float xpos= xscale*i;
-				//float ypos= yscale*j;
-				// interpolate at [xpos,ypos]
-				if(i==0){
-					i=0;
-				}
-				mapped[i][j]= f[(int) (1/scale*i+1)][(int) (1/scale*j+1)];//interpolate(1/scale*i+1,1/scale*j+1,f);	
-			}
-		}
-		return mapped;
-	}
+
 	
 }

@@ -95,14 +95,14 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 
 		mx=my=myOld=mxOld=0;
 		
-		ssy = 100;
-		ssx = 200;
+		ssy = 128;
+		ssx = 128;
 		scaleOut = 3;
 		
 		sx = (int)scaleOut*ssx;
 		sy = (int)scaleOut*ssy;
 		//setup FluidSolver size
-		fs.setup(ssx, ssy, 0.19F, scaleOut);
+		fs.setup(ssx, ssy, 1.0F, scaleOut);
 		fp = new FluidPanel(fs);
 		fp.setBounds(5, 26, sx, sy);
 		
@@ -499,7 +499,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	public static void reset(){
 		fs.reset();
 		writeTxt = cbox_WriteTxt.isSelected();
-		writeImg = cbox_WriteTxt.isSelected();
+		writeImg = cbox_WriteImg.isSelected();
 	}
 
 	public static void refreshDebug(int x, int y){
@@ -661,9 +661,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	public void mouseReleased(MouseEvent object) {
 		// Button animation
 		//*************************************************
-		if(object.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon("img\\stop_hov.png"));	}
-		if(object.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon("img\\play_hov.png"));	}
-		if(object.getSource() == btnPause ){	btnPause.setIcon(new ImageIcon("img\\pause_hov.png"));	}
+		if(object.getSource() == btnStop ){		btnStop.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/stop_hov.png")));	}
+		if(object.getSource() == btnPlay ){		btnPlay.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/play_hov.png")));	}
+		if(object.getSource() == btnPause ){	btnPause.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/pause_hov.png")));	}
 		
 		mouseDown=false;
 		
@@ -733,7 +733,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		    
 		} catch (NumberFormatException e) {
 			x=old;
-		    System.out.println("No valied number entered.");
+		    System.out.println("No valid number entered.");
 		}
 		
 		if(x>b1)x=b1;
