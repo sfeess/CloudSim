@@ -50,9 +50,10 @@ public class FluidPanel extends JPanel{
 	
 		// BiLinear interpolation SimGrid to Pixels
 				if(!FluidViewer.dispVort)
-					pixelField1 = evaluate(FluidViewer.fs.qv);
+					//pixelField1 = evaluate(FluidViewer.fs.qv);
+					pixelField1 = evaluate(FluidViewer.fs.d);
 					mapScale= 1f;
-					pixelField2 = evaluate(FluidViewer.fs.qc);
+					//pixelField2 = evaluate(FluidViewer.fs.qc);
 					
 				if(FluidViewer.dispVort)
 					ptField=evaluate(FluidViewer.fs.pt);
@@ -71,12 +72,12 @@ public class FluidPanel extends JPanel{
 						//v = v>254 ? 255:v; 
 						
 						// cloud vapor
-						qv =(int)((10f*pixelField1[i][sy-1-j])*255);
+						qv =(int)((1f*pixelField1[i][sy-1-j])*255);
 						qv = qv<0 ? 0:qv; 
 						
 						//cloud water
-						qc =(int)((100*pixelField2[i][sy-1-j])*255);
-						qc = qc<0 ? 0:qc; 
+						//qc =(int)((100*pixelField2[i][sy-1-j])*255);
+						//qc = qc<0 ? 0:qc; 
 						
 					
 						
@@ -84,7 +85,6 @@ public class FluidPanel extends JPanel{
 					 	
 						int[] d = new int[3];	
 						d[0]=51; d[1]=102; d[2]=153; 
-						
 						//qc=0;
 						
 						
@@ -94,6 +94,9 @@ public class FluidPanel extends JPanel{
 						d[1] = Math.min(255, d[1]+qc+qv);
 						d[2] = Math.min(255, d[2]+qc);
 						
+						d[0] = Math.min(255, qv);
+						d[1] = Math.min(255, qv);
+						d[2] = Math.min(255, qv);
 						
 						if(FluidViewer.dispVort){	
 							d[0]=heatColor(v).getRed();

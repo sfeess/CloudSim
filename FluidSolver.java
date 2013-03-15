@@ -1,8 +1,11 @@
-import java.math.BigDecimal;
 
 
 public class FluidSolver {
 	
+	float qc_max=0;
+	boolean rk = false;
+	int rkSteps=5;
+	 
 	// Simulator quantities
 	//************************************************************
 	int sx, sy;					//Pixelsize
@@ -71,9 +74,6 @@ public class FluidSolver {
 	 */
 	public void init(){
 		
-		
-		
-		
 		// Fluid variables
 		//************************************************************
 		u = 	new float[ssx+2][ssy+2];
@@ -105,9 +105,7 @@ public class FluidSolver {
 		diff = 0.0000f;
 		visc = 0.000000000f;
 		
-		//v = Field.constField(ssx,ssy,1f);
-		//u = Field.boxField(ssx,ssy,1f);
-		//d = Field.boxField(ssx,ssy,1f);
+		
 		
 		// Initialize Cloud constants
 		//************************************************************
@@ -119,13 +117,13 @@ public class FluidSolver {
 		
 		
 		// user defined
-		maxAlt = 	6000;		// altitude in meter on top of sim grid
+		maxAlt = 	3000;		// altitude in meter on top of sim grid
 		tlr = 		0.9f; 		// Kelvin per 100 meter between 0.55 and 0.99
 			tlr /= 	100; 		// Kelvin per 1 meter
 		t0 = 		295;		// temp on ground in Kelvin
 		hum = 		0.6f;		// humidty
 		buoyancy =  0.8f;
-		vort = 		0.4f;
+		vort = 		0.2f;
 		
 		reset();
 	}	
@@ -142,6 +140,10 @@ public class FluidSolver {
 				u[x][y] = uOld[x][y] = v[x][y] = vOld[x][y] = d[x][y] = dOld[x][y] = vorticity[x][y] = qc[x][y] = 0.0f;  // = out[x]
 			}
 		}
+		
+		v = Field.boxField(ssx,ssy,1f);
+		u = Field.boxField(ssx,ssy,1f);
+		d = Field.boxField(ssx,ssy,1f);
 		
 		// Initialize absolute Temp lookup
 		//************************************************************
@@ -184,6 +186,7 @@ public class FluidSolver {
 		
 		
 		
+		
 	}
 	
 	
@@ -211,40 +214,38 @@ public class FluidSolver {
 	 */
 	public void solveVel(){
 		
+		//addSource(qv,qvOld);
+		
+		
 		//addSource(u,uOld);
 		//addSource(v,vOld);
-		
 		
 		//add moving vel Source
 		//addSource(v,Field.smlBoxField(ssx,ssy,0.5f));
 		//addSource(u,Field.smlBoxField(ssx,ssy,(float) Math.sin(step*0.2)));
 		
-		vorticityConf(uOld, vOld, vort);
-		addSource(u,uOld);
-		addSource(v,vOld);
 		
-		
-		
+		//vorticityConf(uOld, vOld, vort);
+		//addSource(u,uOld);
+		//addSource(v,vOld);
 		
 		project(u,v,uOld,vOld);
 		
-		buoyancy(vOld, buoyancy);
-		addSource(v,vOld);
+		//buoyancy(vOld, buoyancy);
+		//addSource(v,vOld);
 		
-		swapQv(); swapQc(); swapPt();
+		//swapQv(); swapQc(); swapPt();
 		//copy(qv,qvOld); copy(qc,qcOld);copy(pt,ptOld);
-		advect(4, qv, qvOld, u, v);
-		advect(5, qc, qcOld, u, v);
-		advect(3, pt, ptOld, u, v);
+		//advect(4, qv, qvOld, u, v);
+		//advect(5, qc, qcOld, u, v);
+		//advect(3, pt, ptOld, u, v);
 		
-		swapU(); swapV();
+		//swapU(); swapV();
 		//copy(u,uOld); copy(v,vOld);	
-		advect(1, u, uOld, uOld, vOld);
-		advect(2, v, vOld, uOld, vOld);
+		//advect(1, u, uOld, uOld, vOld);
+		//advect(2, v, vOld, uOld, vOld);
 		
-		
-		
-		waterCont();
+		//waterCont();
 		
 		//diffuse(1, u, uOld, visc, dt);
 		//diffuse(2, v, vOld, visc, dt);
@@ -255,17 +256,10 @@ public class FluidSolver {
 		
 		//addSource(qv,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,(float)Math.abs(Math.sin(time))*0.01f));
 		
-		
-		
-		
-		
-		
-		
-		
 		// reset uOld vOld
 		for (int i = 0; i < ssx+2; i++) {
 			for (int j = 0; j < ssy+2; j++){
-				uOld[i][j] = 0;vOld[i][j] = 0;
+				uOld[i][j] = 0;vOld[i][j] = 0; qvOld[i][j] = 0;
 			}
 		}
 		
@@ -358,7 +352,60 @@ public class FluidSolver {
 	}
 	
 	
+	/*
+	 * 2nd order Runge Kutta integration for central data
+	 * x: position x
+	 * y: position y
+	 */
+	public float[] rungeKuttaOld(float x, float y){
+		
+		float u_mid,v_mid;
+		float[] res = {0f,0f};
+		
+		u_mid = interpolate(x, y-0.5f, u);
+		v_mid = interpolate(x-0.5f, y, v);
+		
+		x = x -  0.5f * dt * u_mid;
+		y = y -  0.5f * dt * v_mid;
+		
+		u_mid = interpolate(x, y-0.5f, u);
+		v_mid = interpolate(x-0.5f, y, v);
+		
+		x = x -  0.5f * dt * u_mid;
+		y = y -  0.5f * dt * v_mid;
+		
+		res[0] = x;
+		res[1] = y;
+		
+		return res;
+	}
+	
+	
+	/*
+	 * 2nd order Runge Kutta integration for central data
+	 * x: position x
+	 * y: position y
+	 */
+	public float[] rungeKutta(float x, float y, float iter){
+		
+		float u_mid,v_mid;
+		float[] res = {0f,0f};
+		iter = 5;
+		
+		for(int i=0; i<iter; i++){
+			u_mid = interpolate(x, y-0.5f, u);
+			v_mid = interpolate(x-0.5f, y, v);
+		
+			x = x -  (float)(1/iter) * dt * u_mid;
+			y = y -  (float)(1/iter) * dt * v_mid;
+		}
+	
 
+		res[0] = x;
+		res[1] = y;
+		
+		return res;
+	}
 	
 	
 	
@@ -371,7 +418,7 @@ public class FluidSolver {
 	 * @param v = V-Velocity field
 	 */
 	public void advect(int b, float[][] a, float[][] aOld, float[][] u, float[][] v){
-		
+		float[] pos = {0,0};
 		float x,y;
 
 		// for density (or other central data)
@@ -379,8 +426,17 @@ public class FluidSolver {
 			for (int i=1; i<=ssx; i++){
 				for (int j=1; j<=ssy; j++){
 					// x and y are in middle of the u/v valuepositions.
-					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )/2 ;
-					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )/2;
+					if(!rk){
+						x = (i+0.5f) -  dt * ( u[i][j] + u[i+1][j] )/2 ;
+						y = (j+0.5f) -  dt * ( v[i][j] + v[i][j+1] )/2;
+					}
+					
+					// rk needs position of generated particle (here: center)
+					else{
+						pos = rungeKutta(i+0.5f,j+0.5f,4);
+						x=pos[0];
+						y=pos[1];
+					}
 					//Boarder Conditions
 					if(x<0.0){		x=0.0f;}
 					if(y<0.0){		y=0.0f;}
@@ -399,8 +455,37 @@ public class FluidSolver {
 			for (int i=1; i<=ssx; i++){
 				for (int j=1; j<=ssy; j++){
 					//x is onValue - for y interpolate 4 surrounding v values
-					x = i - dt * u[i][j];
-					y = (j+0.5f) - dt * ( v[i-1][j] + v[i][j] + v[i-1][j+1] + v[i][j+1])/4;
+					if(!rk){
+						x = i - 		 dt * u[i][j];
+						y = (j+0.5f) - 	 dt * ( v[i-1][j] + v[i][j] + v[i-1][j+1] + v[i][j+1])/4;
+					}
+					
+					else{
+						
+						
+						x = i - 		0.25f * dt * u[i][j];
+						y = (j+0.5f) - 	0.25f * dt * ( v[i-1][j] + v[i][j] + v[i-1][j+1] + v[i][j+1])/4;
+						
+						float u_mid = interpolate(x, y, u);
+						float v_mid = interpolate(x-0.5f, y, v);
+						
+						x = x -  0.25f * dt * u_mid;
+						y = y -  0.25f * dt * v_mid;
+						
+						u_mid = interpolate(x, y, u);
+						v_mid = interpolate(x-0.5f, y, v);
+						
+						x = x -  0.25f * dt * u_mid;
+						y = y -  0.25f * dt * v_mid;
+						
+						u_mid = interpolate(x, y, u);
+						v_mid = interpolate(x-0.5f, y, v);
+						
+						x = x -  0.25f * dt * u_mid;
+						y = y -  0.25f * dt * v_mid;
+						
+					}	
+					
 					//Boarder Conditions
 					if(x<0.5){		x=0.5f;}
 					if(y<0.5){		y=0.5f;}
@@ -422,8 +507,34 @@ public class FluidSolver {
 					// 1 -> position of v velocity
 					// 2 -> interpolate velocity for Staggered grid 
 					//__|==1==|__________|==============================2=====================================|
-					x = (i+0.5f) - dt * ( u[i][j-1] + u[i][j] + u[i+1][j-1] + u[i+1][j])*0.25f ;
-					y =  j -       dt *  v[i][j];
+					if(!rk){
+						x = (i+0.5f) - dt * ( u[i][j-1] + u[i][j] + u[i+1][j-1] + u[i+1][j])*0.25f ;
+						y =  j -       dt *  v[i][j];
+					}
+					else{
+						x = (i+0.5f) - 0.25f * dt * ( u[i][j-1] + u[i][j] + u[i+1][j-1] + u[i+1][j])*0.25f ;
+						y =  j -       0.25f * dt *  v[i][j];
+						
+						float u_mid = interpolate(i, j-0.5f, u);
+						float v_mid = interpolate(i, j, v);
+						
+						x = x -  0.25f * dt * u_mid;
+						y = y -  0.25f * dt * v_mid;
+						
+						u_mid = interpolate(i, j-0.5f, u);
+						v_mid = interpolate(i, j, v);
+						
+						x = x -  0.25f * dt * u_mid;
+						y = y -  0.25f * dt * v_mid;
+
+						u_mid = interpolate(i, j-0.5f, u);
+						v_mid = interpolate(i, j, v);
+						
+						x = x -  0.25f * dt * u_mid;
+						y = y -  0.25f * dt * v_mid;
+					
+					}
+					
 					//Boarder Conditions
 					if(x<0.5){		x=0.5f;}
 					if(y<0.5){		y=0.5f;}
@@ -441,10 +552,16 @@ public class FluidSolver {
 			for (int i=1; i<=ssx; i++){
 				for (int j=1; j<=ssy; j++){
 					// x and y are in middle of the u/v valuepositions.
-					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
-					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f ;
-					
-					
+					if(!rk){
+						x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
+						y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f ;
+					}
+					else{
+						// rk needs position of cell-center
+						pos = rungeKutta(i+0.5f,j+0.5f,4);
+						x=pos[0];
+						y=pos[1];
+					}
 					//Boarder Conditions
 					if(x<0.0){		x=0.0f;}
 					if(y<0.0){		y=0.0f;}
@@ -462,11 +579,19 @@ public class FluidSolver {
 				for (int j=1; j<=ssy; j++){
 					for (int i=1; i<=ssx; i++){
 					// x and y are in middle of the u/v valuepositions.
-					x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
-					y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f;
+						if(!rk){
+							x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
+							y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f ;
+						}
+						else{
+							// rk needs position of cell-center
+							pos = rungeKutta(i+0.5f,j+0.5f,4);
+							x=pos[0];
+							y=pos[1];
+						}
 					
 					if(y<0.0){		y=0.0f;}
-					if(y>ssy+1){	y=ssy+1f;}
+					if(y>ssy+0.5){	y=ssy+0.5f;}
 					// interpolate the value of old field
 					
 					a[i][j] = interpolatePer(x-0.5f,y-0.5f,aOld);
@@ -480,9 +605,17 @@ public class FluidSolver {
 			for (int j=1; j<=ssy; j++){
 				for (int i=1; i<=ssx; i++){
 				// x and y are in middle of the u/v valuepositions.
-				x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
-				y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f;
-							
+					if(!rk){
+						x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
+						y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f ;
+					}
+					else{
+						// rk needs position of cell-center
+						pos = rungeKutta(i+0.5f,j+0.5f,4);
+						x=pos[0];
+						y=pos[1];
+					}
+				
 				if(y<0.0){		y=0.0f;}
 				if(y>ssy+1){	y=ssy+1f;}
 				// interpolate the value of old field
@@ -679,14 +812,7 @@ public class FluidSolver {
 	
 	public void buoyancy(float[][] f, float k){
 		float vpt,avpt;
-		avpt = 0;
-		for (int i=0; i<=ssx; i++){
-			for (int j=0; j<=ssy; j++){
-				avpt += pt[i][j]*( 1 + 0.61f * qv[i][j]);;
-				
-			}
-		}
-		avpt = avpt/(ssx*ssy);
+		
 		
 		for (int i=0; i<=ssx; i++){
 			for (int j=0; j<=ssy; j++){
@@ -749,6 +875,12 @@ public class FluidSolver {
 				
 				qv[i][j] = qv[i][j] + d_qv;
 				qc[i][j] = qc[i][j] - d_qv;
+				
+				
+				if(j>3 && qc[i][j]>qc_max){	
+					qc_max=qc[i][j];
+					System.out.println(1/qc_max);
+				}
 				
 				//if(i==30 && j ==4)System.out.println("qs="+qs+" dqv="+d_qv+" qc="+qc[i][j]+" qv="+qv[i][j]);
 				
@@ -843,8 +975,7 @@ public void setBounds (int b, float[][] f){
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
 				f[i][0]   =  0; 
-				
-				f[i][ssy+1] =  f[i][ssy+1]; 
+				f[i][ssy+1] =  f[i][ssy]; 
 				
 			}
 		}
@@ -859,8 +990,8 @@ public void setBounds (int b, float[][] f){
 				f[1][i]   = 0; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
-				f[i][0]   = 0; 
-				f[i][ssy] = 0; 
+				f[i][0]     = 0; 		//Side boundaries zero - see DAKoehler pg46
+				f[i][ssy]   = 0; 
 				f[i][ssy+1] = 0; 
 				 
 			}
@@ -870,16 +1001,17 @@ public void setBounds (int b, float[][] f){
 		// set to initial values
 		// bottom noise
 		if (b==3){
+			float pt0=(float) (absT[0] * ( Math.pow( (p0/absP[0]) , 0.286)));  
+			
 			for(int i= 0; i<ssx+2; i++){
-				f[i][0] = t0;
-				if(i>30 && i<80)f[i][3] = t0+	PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*20f; 
-				
-				
+				f[i][0] = pt0;
+				if(i>40 && i<60)
+					f[i][2] = pt0+	5;//10-PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*5f; 
 				f[i][ssy+1] = 	(float) (absT[ssy+1] * Math.pow( (100/absP[ssy+1]) , 0.286 ) );  
 			}
 			for(int j= 0; j<ssy+2; j++){
-				f[0][j] = 		(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
-				f[ssx+1][j] = 	(float) (absT[j] * Math.pow( (100/absP[j]) , 0.286));  
+				f[0][j]     = 	(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
+				f[ssx+1][j] = 	(float) (absT[j] * Math.pow( (100/absP[j] ) , 0.286));  
 			}
 			
 		}
@@ -889,11 +1021,15 @@ public void setBounds (int b, float[][] f){
 		// top = 0
 		// bottom = noise
 		if (b==4){
+			float qv0= (float) (hum	*(  (380/(absP[0]*1000)  ) * Math.exp( (17.67*(absT[0]-273.15)) / (absT[0]-273.15+243.5)))) ;
+			float qv1= (float) (hum	*(  (380/(absP[ssy+1]*1000)  ) * Math.exp( (17.67*(absT[ssy+1]-273.15)) / (absT[ssy+1]-273.15+243.5)))) ;
+			
 			for(int i= 0; i<ssx+2; i++){
-				f[i][ssy+1] = 0;  
-				f[i][0] = 0;
+				f[i][ssy+1] = 	qv1;  
+				f[i][0] 	= 	qv0;
+				
 				//PerlinNoise.perlinNoise(i, 50000000+time*0.8f, 0.51f, 10f, 1f)*0.9f; 
-				if(i>30 && i<80)f[i][0] =0.05f;//+= 	0.00041f;
+				if(i>40 && i<60)	f[i][0] =0.2f;//+= 	0.00041f;
 			}
 		}
 		// b=5 cloud water
@@ -904,7 +1040,7 @@ public void setBounds (int b, float[][] f){
 				f[ssx+1][i] = 0;
 			}
 			for (int i=0 ; i<ssx+2 ; i++ ) { 
-				f[i][0]   = 0; 
+				f[i][0]   	= 0; 
 				f[i][ssy+1] = 0; 
 			}
 		}
@@ -989,7 +1125,7 @@ public void setBounds (int b, float[][] f){
 		
 	}
 	
-	
+
 	
 
 	

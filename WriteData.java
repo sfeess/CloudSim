@@ -16,8 +16,10 @@ public class WriteData {
 
 	
 	public static void valuesOut(int x, int y){
+		new File("Cloud_Out").mkdirs();
 		
-		File file = new File("Output\\FluidValues_x"+x+"_y"+y+".txt");
+		File file = new File("Cloud_Out\\FluidValues_x"+x+"_y"+y+".txt");
+		
 	     try {
 	       FileWriter writer = new FileWriter(file ,true);
 	       
@@ -44,17 +46,22 @@ public class WriteData {
 	      e.printStackTrace();
 	    }
 	 }
-		
+	
+
+	
+	
 	
 
 	public static void imgOut(){
+		
+		new File("Cloud_Out").mkdirs();
 		
 		try {
 			String x = String.valueOf(FluidViewer.fs.step);
 			if (x.length()==1)x= "000"+x;
 			if (x.length()==2)x= "00"+x;
 			if (x.length()==3)x= "0"+x;
-			ImageIO.write(FluidPanel.img, "bmp", new File("Output\\TestImg_"+x+".bmp"));
+			ImageIO.write(FluidPanel.img, "bmp", new File("Cloud_Out\\CloudImg_"+x+".bmp"));
 		} 
 		catch (IOException ex) {
 			System.out.println("Error");

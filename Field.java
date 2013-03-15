@@ -54,6 +54,20 @@ public class Field {
 		return field;	
 	}
 	
+	public static float[][] checkerField(int x, int y, float v){
+		float[][] field = new float[(x+2)][(y+2)];
+		// Feld füllen
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+				if( (i/10)%2 == 0 && (j/10)%2 != 0)
+					field[i][j] = v;
+				else field[i][j] =0F;
+			}
+		}
+		return field;	
+	}
+	
+	
 	
 	public static float[][] boxField(int x, int y, float v){
 		float[][] field = new float[(x+2)][(y+2)];
@@ -61,10 +75,11 @@ public class Field {
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
 
-				if(i>(x/2-x/6) && i<(x/2+x/6) && j>(y/2-y/6) && j<(y/2+y/6)){
+				//if(i>(x/2-x/6) && i<(x/2+x/6) && j>(y/2-y/6) && j<(y/2+y/6)){
+				if(i>(x/2-x/6) && i<(x/2+x/6) && j>(y/4-y/6) && j<(y/4+y/6)){
 				field[i][j] = v;}
 				else {field[i][j] =0F;}
-			
+				
 			}
 		}
 		return field;	
