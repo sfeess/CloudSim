@@ -3,7 +3,7 @@
 public class FluidSolver {
 	
 	float qc_max=0;
-	int rkSteps=1;
+	int rkSteps=5;
 	 
 	// Simulator quantities
 	//************************************************************
@@ -140,9 +140,9 @@ public class FluidSolver {
 			}
 		}
 		
-		//v = Field.boxField(ssx,ssy,1f);
+		v = Field.boxField(ssx,ssy,1f);
 		//u = Field.circFieldU(ssx,ssy,1f);
-		//d = Field.checkerField(ssx,ssy,1f);
+		d = Field.checkerField(ssx,ssy,1f);
 		
 		// Initialize absolute Temp lookup
 		//************************************************************
@@ -219,27 +219,27 @@ public class FluidSolver {
 		//addSource(v,Field.smlBoxField(ssx,ssy,0.5f));
 		//addSource(u,Field.smlBoxField(ssx,ssy,(float) Math.sin(step*0.2)));
 		
-		vorticityConf(uOld, vOld, vort);
-		addSource(u,uOld);
-		addSource(v,vOld);
+		//vorticityConf(uOld, vOld, vort);
+		//addSource(u,uOld);
+		//addSource(v,vOld);
 		
-		project(u,v,uOld,vOld);
+		//project(u,v,uOld,vOld);
 		
-		buoyancy(vOld, buoyancy);
-		addSource(v,vOld);
+		//buoyancy(vOld, buoyancy);
+		//addSource(v,vOld);
 		
-		swapQv(); swapQc(); swapPt();
+		//swapQv(); swapQc(); swapPt();
 		//copy(qv,qvOld); copy(qc,qcOld);copy(pt,ptOld);
-		advect(4, qv, qvOld, u, v);
-		advect(5, qc, qcOld, u, v);
-		advect(3, pt, ptOld, u, v);
+		//advect(4, qv, qvOld, u, v);
+		//advect(5, qc, qcOld, u, v);
+		//advect(3, pt, ptOld, u, v);
 		
 		swapU(); swapV();
 		//copy(u,uOld); copy(v,vOld);	
 		advect(1, u, uOld, uOld, vOld);
 		advect(2, v, vOld, uOld, vOld);
 		
-		waterCont();
+		//waterCont();
 		
 		//diffuse(1, u, uOld, visc, dt);
 		//diffuse(2, v, vOld, visc, dt);
@@ -344,60 +344,7 @@ public class FluidSolver {
 	}
 	
 	
-	/*
-	 * 2nd order Runge Kutta integration for central data
-	 * x: position x
-	 * y: position y
-	 */
-	public float[] rungeKuttaOld(float x, float y){
-		
-		float u_mid,v_mid;
-		float[] res = {0f,0f};
-		
-		u_mid = interpolate(x, y-0.5f, u);
-		v_mid = interpolate(x-0.5f, y, v);
-		
-		x = x -  0.5f * dt * u_mid;
-		y = y -  0.5f * dt * v_mid;
-		
-		u_mid = interpolate(x, y-0.5f, u);
-		v_mid = interpolate(x-0.5f, y, v);
-		
-		x = x -  0.5f * dt * u_mid;
-		y = y -  0.5f * dt * v_mid;
-		
-		res[0] = x;
-		res[1] = y;
-		
-		return res;
-	}
-	
-	
-	/*
-	 * 2nd order Runge Kutta integration for central data
-	 * x: position x
-	 * y: position y
-	 */
-	public float[] rungeKutta(float x, float y, float iter){
-		
-		float u_mid,v_mid;
-		float[] res = {0f,0f};
-		iter = 5;
-		
-		for(int i=0; i<iter; i++){
-			u_mid = interpolate(x, y-0.5f, u);
-			v_mid = interpolate(x-0.5f, y, v);
-		
-			x = x -  (float)(1/iter) * dt * u_mid;
-			y = y -  (float)(1/iter) * dt * v_mid;
-		}
-	
 
-		res[0] = x;
-		res[1] = y;
-		
-		return res;
-	}
 	
 	
 	
@@ -410,281 +357,84 @@ public class FluidSolver {
 	 * @param v = V-Velocity field
 	 */
 	public void advect(int b, float[][] a, float[][] aOld, float[][] u, float[][] v){
-		float[] pos = {0,0};
-		float x,y;
-		float offset_x, offset_y;
 		
+		float x, y, offset_x, offset_y;
+		
+		// offset to left edge
 		if(b==1){
 			offset_x = 0;
 			offset_y = 0.5f;
 		}
+		// offset to top edge
 		else if(b==2){
 			offset_x = 0.5f;
 			offset_y = 0f;
 		}
+		// offset to cell center
 		else {
 			offset_x = 0.5f;
 			offset_y = 0.5f;
 		}
 		
-		// for density (or other central data)
-		if(b==0){
-			for (int i=1; i<=ssx; i++){
-				for (int j=1; j<=ssy; j++){
-					// x and y are in middle of the u/v valuepositions.
-					if(rkSteps<2){
-						x = (i+0.5f) -  dt * ( u[i][j] + u[i+1][j] )/2 ;
-						y = (j+0.5f) -  dt * ( v[i][j] + v[i][j+1] )/2;
-					}
-					
-					// rk needs position of generated particle (here: center)
-					else{
-						pos = rungeKutta(i+0.5f,j+0.5f,rkSteps);
-						x=pos[0];
-						y=pos[1];
-					}
-					//Boarder Conditions
-					if(x<0.0){		x=0.0f;}
-					if(y<0.0){		y=0.0f;}
-					if(x>ssx+0.5){	x=ssx+0.5f;}
-					if(y>ssy+0.5){	y=ssy+0.5f;}
-					// interpolate the value of old field
-					a[i][j] = (float)interpolate(x-0.5f,y-0.5f,aOld);
-				}
-			}
-			setBounds(b,a);
-		}
+		//**********************************************************************************
+		// McCormack
+		float phi_n_x, 		phi_n_y;
+		float phi_n_hat_x, 	phi_n_hat_y;
+		float phi_n1_hat_x,	phi_n1_hat_y;
 		
-		// for u velocity (stored on left cell edge)
-		// create particle on left cell edge
-		else if(b==1){
-			for (int i=1; i<=ssx; i++){
-				for (int j=1; j<=ssy; j++){
-					//x is onValue - for y interpolate 4 surrounding v values
-					if(rkSteps<2){
-						x = i - 		 dt * u[i][j];
-						y = (j+0.5f) - 	 dt * ( v[i-1][j] + v[i][j] + v[i-1][j+1] + v[i][j+1])/4;
-					}
-					
-					else{
-						
-						
-						x = i - 		0.25f * dt * u[i][j];
-						y = (j+0.5f) - 	0.25f * dt * ( v[i-1][j] + v[i][j] + v[i-1][j+1] + v[i][j+1])/4;
-						
-						float u_mid = interpolate(x, y, u);
-						float v_mid = interpolate(x-0.5f, y, v);
-						
-						x = x -  0.25f * dt * u_mid;
-						y = y -  0.25f * dt * v_mid;
-						
-						u_mid = interpolate(x, y, u);
-						v_mid = interpolate(x-0.5f, y, v);
-						
-						x = x -  0.25f * dt * u_mid;
-						y = y -  0.25f * dt * v_mid;
-						
-						u_mid = interpolate(x, y, u);
-						v_mid = interpolate(x-0.5f, y, v);
-						
-						x = x -  0.25f * dt * u_mid;
-						y = y -  0.25f * dt * v_mid;
-						
-					}	
-					
-					//Boarder Conditions
-					if(x<0.5){		x=0.5f;}
-					if(y<0.5){		y=0.5f;}
-					if(x>ssx+0.5){	x=ssx+0.5f;}
-					if(y>ssy+0.5){	y=ssy+0.5f;}
-					// interpolate the value of old field
-					a[i][j] = (float)interpolate(x,y-0.5f,aOld);
-				}
-			}
-			setBounds(b,a);
-		}
-		
-		// for v velocity (stored on upper cell edge)
-		// create particle on top cell edge
-		else if(b==2){
-			for (int i=1; i<=ssx; i++){
-				for (int j=1; j<=ssy; j++){
-					// backtracked x&y coordinates xy = pointXY - dt * velocityUV
-					// 1 -> position of v velocity
-					// 2 -> interpolate velocity for Staggered grid 
-					//__|==1==|__________|==============================2=====================================|
-					if(rkSteps<2){
-						x = (i+0.5f) - dt * ( u[i][j-1] + u[i][j] + u[i+1][j-1] + u[i+1][j])*0.25f ;
-						y =  j -       dt *  v[i][j];
-					}
-					else{
-						x = (i+0.5f) - 0.25f * dt * ( u[i][j-1] + u[i][j] + u[i+1][j-1] + u[i+1][j])*0.25f ;
-						y =  j -       0.25f * dt *  v[i][j];
-						
-						float u_mid = interpolate(i, j-0.5f, u);
-						float v_mid = interpolate(i, j, v);
-						
-						x = x -  0.25f * dt * u_mid;
-						y = y -  0.25f * dt * v_mid;
-						
-						u_mid = interpolate(i, j-0.5f, u);
-						v_mid = interpolate(i, j, v);
-						
-						x = x -  0.25f * dt * u_mid;
-						y = y -  0.25f * dt * v_mid;
-
-						u_mid = interpolate(i, j-0.5f, u);
-						v_mid = interpolate(i, j, v);
-						
-						x = x -  0.25f * dt * u_mid;
-						y = y -  0.25f * dt * v_mid;
-					
-					}
-					
-					//Boarder Conditions
-					if(x<0.5){		x=0.5f;}
-					if(y<0.5){		y=0.5f;}
-					if(x>ssx+0.5){	x=ssx+0.5f;}
-					if(y>ssy+0.5){	y=ssy+0.5f;}
-					// interpolate the value of old field
-					a[i][j] = (float)interpolate(x-0.5f,y,aOld);
-				}
-			}
-			setBounds(b,a);
-		}
-		
-		// for pt
-		else if(b==3){
-			for (int i=1; i<=ssx; i++){
-				for (int j=1; j<=ssy; j++){
-					// x and y are in middle of the u/v valuepositions.
-					if(rkSteps<2){
-						x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
-						y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f ;
-					}
-					else{
-						// rk needs position of cell-center
-						pos = rungeKutta(i+0.5f,j+0.5f,rkSteps);
-						x=pos[0];
-						y=pos[1];
-					}
-					//Boarder Conditions
-					if(x<0.0){		x=0.0f;}
-					if(y<0.0){		y=0.0f;}
-					if(x>ssx+0.5){	x=ssx+0.5f;}
-					if(y>ssy+0.5){	y=ssy+0.5f;}
-					// interpolate the value of old field
-					a[i][j] =(float)interpolate(x-0.5f,y-0.5f,aOld);
-				}
-			}
-			setBounds(b,a);
-		}
-		// for qv periodic sides
-		else if(b==4){
-			
-				for (int j=1; j<=ssy; j++){
-					for (int i=1; i<=ssx; i++){
-					// x and y are in middle of the u/v valuepositions.
-						if(rkSteps<2){
-							x = (i+0.5f) -  dt * ( u[i][j] + u[i+1][j] )/2 ;
-							y = (j+0.5f) -  dt * ( v[i][j] + v[i][j+1] )/2;
-						}
-						
-						// rk needs position of generated particle (here: center)
-						else{
-							pos = rungeKutta(i+0.5f,j+0.5f,rkSteps);
-							x=pos[0];
-							y=pos[1];
-						}
-					
-					//if(y<0.0){		y=0.0f;}
-					//if(y>ssy+0.5){	y=ssy+0.5f;}
-					// interpolate the value of old field
-					
-					a[i][j] = interpolate(x-0.5f,y-0.5f,aOld);
-					//a[i][j] = interpolatePer(i,j,aOld);
-				}
-			}
-			setBounds(b,a);
-		}
-		// for qc
-		else if(b==5){
+		for (int i=1; i<=ssx; i++){
 			for (int j=1; j<=ssy; j++){
-				for (int i=1; i<=ssx; i++){
-				// x and y are in middle of the u/v valuepositions.
-					if(rkSteps<2){
-						x = (i+0.5f) - dt * ( u[i][j] + u[i+1][j] )*0.5f ;
-						y = (j+0.5f) - dt * ( v[i][j] + v[i][j+1] )*0.5f ;
-					}
-					else{
-						// rk needs position of cell-center
-						pos = rungeKutta(i+0.5f,j+0.5f,rkSteps);
-						x=pos[0];
-						y=pos[1];
-					}
+				// generate particle at position [x|y]
+				phi_n_x = (i+offset_x) ;
+				phi_n_y = (j+offset_y) ;
 				
-				if(y<0.0){		y=0.0f;}
-				if(y>ssy+1){	y=ssy+1f;}
+				// send particle forward to phi_n1_hat
+				phi_n1_hat_x = phi_n_x -  dt * interpolate(phi_n_x		, phi_n_y-0.5f	,u) ;
+				phi_n1_hat_y = phi_n_y -  dt * interpolate(phi_n_x-0.5f	, phi_n_y		,v) ;
+				
+				// send particle back from phi_n1_hat to phi_n_hat
+				phi_n_hat_x = phi_n1_hat_x +  dt * interpolate(phi_n1_hat_x		, phi_n_y-0.5f 	,u) ;
+				phi_n_hat_y = phi_n1_hat_y +  dt * interpolate(phi_n1_hat_x-0.5f, phi_n_y		,v) ;
+				
+				// calculate phi_n1
+				x =  phi_n1_hat_x + 0.5f * (phi_n_x - phi_n_hat_x);
+				y =  phi_n1_hat_y + 0.5f * (phi_n_y - phi_n_hat_y);
+				
 				// interpolate the value of old field
-				a[i][j] = interpolate(x-0.5f,y-0.5f,aOld);
-				}
+				if(b==4) 
+					a[i][j] = (float)interpolatePer(x-offset_x, y-offset_y, aOld);
+				else
+					a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld);
 			}
-			setBounds(b,a);
 		}
 		
-	}
-
-
-	/**
-	 * Gauss Seidel Relaxation Solver
-	 * Solves Equations in form  Ax=b with b=0 
-	 * A  = Matrix
-	 * a0 = matrix to store temp results
-	 * 
-	 */
-	float[] linSolver(float[][] a, float[][] a0, float[] b){
-		
-		float u, l;
-		
-		// approximation x (at iteration step k) - xOld (at iteration step k-1)
-		float[] x = new float[a.length];
-		float[] xOld = new float[a.length];
-		
-		for(int i=0; i<x.length; i++ ){
-			x[i]=0;  
-			xOld[i]=0;  
-		}
-		
-		for(int k=0; k<17; k++){
-			// step through all lines 
-			for(int i=0; i<a.length; i++){
-				l=0;
-				u=0;
-				// step through all x in line
-				for(int j=0; j<a.length; j++){
-					// calc upper and lower triangle matrix
-					if(j<i){	l+=a[i][j]*x[j];	}
-					if(j>i){	u+=a[i][j]*xOld[j];	}
-				}
-				// calc new approximation
-				x[i]= (1/a[i][i]) * (b[i]-l-u);
+		//**********************************************************************************
+		// Runge Kutta
+		/*
+		for (int i=1; i<=ssx; i++){
+			for (int j=1; j<=ssy; j++){
+				// generate particle at position [x|y]
+				x = (i+offset_x) ;
+				y = (j+offset_y) ;
 				
-			}
-			// stop when result is converged 
-			if (x[0]==xOld[0]){	
-				System.out.println("Ende nach "+k+" Iterationen");
-				break;
+				// send particle backward at current timestep
+				for(int k=0; k<rkSteps; k++){
+					x = x -  (float)(1f/rkSteps) * dt * interpolate(x, y-0.5f, u);
+					y = y -  (float)(1f/rkSteps) * dt * interpolate(x-0.5f, y, v);
 				}
-			// copy approximation x to xOld
-			System.arraycopy(x,0, xOld, 0, a.length);
+				
+				// interpolate the value of old field
+				if(b==4) 
+					a[i][j] = (float)interpolatePer(x-offset_x, y-offset_y, aOld);
+				else
+					a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld);
+			}
 		}
-		return x;
+		*/
+		setBounds(b,a);
 	}
-	
-	
-	
 
-	
+
 	
 	/**
 	 * 
