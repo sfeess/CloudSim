@@ -27,12 +27,15 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	
 	JFrame frame;
 	//Menu Stuff
-	JMenuItem reset;
-	JMenuItem close;
-	JMenuItem debug;
-	JMenuItem vectors;
-	JMenuItem stepcount;
-	JMenuItem vort;
+	JMenuItem menu_reset;
+	JMenuItem menu_close;
+	JMenuItem menu_debug;
+	JMenuItem menu_vectors;
+	JMenuItem menu_stepcount;
+	JMenuItem menu_temp;
+	JMenuItem menu_cloud;
+	JMenuItem menu_dens;
+	JMenuItem menu_vel;
 	JMenuItem paintVel,paintVapor;
 	static JLabel lblDebugvalue1;
 	static JLabel lblDebugvalue2;
@@ -48,7 +51,11 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	JButton btnPause = new JButton();
 	JButton btnStop = new JButton();
 	
-	static boolean dispVec,dispVal,dispVort,dispSteps,mVapor,mVel,dispDebug, dispSettings, play, stop, writeImg, writeTxt;
+	static boolean dispVec,dispVal,dispTemp,dispSteps,mVapor,mVel,dispDebug, dispSettings, play, stop, writeImg, writeTxt;
+	
+	/** Display mode: 0= clouds; 1= temperature; 2= velocity; 3=	density*/
+	public static int dispMain; 	
+	
 	
 	JPanel contentPanel;
 	
@@ -79,6 +86,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	
 	public static void viewerStep(){
 		
+		fp.outFields();
 		fp.repaint();
 				
 		// Output Data
@@ -96,6 +104,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	}
 	public static void init(){
 
+		dispMain = 2;
+		
 		mx=my=myOld=mxOld=0;
 		
 		ssy = 200;
@@ -106,7 +116,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		sy = (int)scaleOut*ssy;
 		//setup FluidSolver size
 		fs.setup(ssx, ssy, 20.0F, scaleOut);
-		fp = new FluidPanel(fs);
+		fp = new FluidPanel(fs, scaleOut);
 		fp.setBounds(5, 26, sx, sy);
 		
 		//setup Output
@@ -114,7 +124,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
 		dispVec=mVel=dispSteps=stop=true;
-		dispVal=mVapor=dispVort=dispDebug=dispVec=dispSettings=play= writeImg= writeTxt=false;
+		dispVal=mVapor=dispTemp=dispDebug=dispVec=dispSettings=play= writeImg= writeTxt=false;
 		
 		time = System.currentTimeMillis();
 	}
@@ -205,20 +215,26 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
         JMenu display = new JMenu("Display");
         JMenu action = new JMenu("Action");
         	
-	    reset = new JMenuItem("Reset");
-	    reset.addActionListener(this);
-	    close = new JMenuItem("Close");
-	    close.addActionListener(this);
+	    menu_reset = new JMenuItem("Reset");
+	    menu_reset.addActionListener(this);
+	    menu_close = new JMenuItem("Close");
+	    menu_close.addActionListener(this);
 	    
-	    debug = new JMenuItem("Debug Values");
-	    debug.addActionListener(this);
-	    vectors = new JMenuItem("Vectors");
-	    vectors.addActionListener(this);
-	    stepcount = new JMenuItem("Frames");
-	    stepcount.addActionListener(this);
-	    vort = new JMenuItem("Temperature");
-	    vort.addActionListener(this);
-	    
+	    menu_debug = new JMenuItem("Debug Values");
+	    menu_debug.addActionListener(this);
+	    menu_vectors = new JMenuItem("Vectors");
+	    menu_vectors.addActionListener(this);
+	    menu_stepcount = new JMenuItem("Framecount");
+	    menu_stepcount.addActionListener(this);
+	    menu_temp = new JMenuItem("Temperature");
+	    menu_temp.addActionListener(this);
+	    menu_cloud = new JMenuItem("Clouds");
+	    menu_cloud.addActionListener(this);
+	    menu_vel = new JMenuItem("Velocity");
+	    menu_vel.addActionListener(this);
+	    menu_dens = new JMenuItem("Density");
+	    menu_dens.addActionListener(this);
+	   
 	    paintVel = new JMenuItem("paint Velocity");
 	    paintVel.addActionListener(this);
 	    paintVapor = new JMenuItem("paint Vapor");
@@ -229,12 +245,18 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	    menuBar.add(action);
 	    menuBar.add(display);
 	    
-	    file.add(reset);
-	    file.add(close);
-	    display.add(debug);
-	    display.add(vectors);
-	    display.add(stepcount);
-	    display.add(vort);
+	    file.add(menu_reset);
+	    file.add(menu_close);
+	    
+	    display.add(menu_cloud);
+	    display.add(menu_vel);
+	    display.add(menu_temp);
+	    display.add(menu_dens);
+	    display.addSeparator();
+	    display.add(menu_vectors); 
+	   	display.add(menu_debug);
+	    display.add(menu_stepcount);
+	    
 	    action.add(paintVel);
 	    action.add(paintVapor);
 	    topPanel.add(menuBar);
@@ -436,7 +458,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtRkSteps = new JTextField();
 	        txtRkSteps.setForeground(Color.WHITE);
 	        txtRkSteps.setBackground(Color.GRAY);
-	        txtRkSteps.setText("2");
+	        txtRkSteps.setText(String.valueOf(fs.rkSteps));
 	        GridBagConstraints gbc_txtRkSteps = new GridBagConstraints();
 	        gbc_txtRkSteps.insets = new Insets(0, 5, 5, 5);
 	        gbc_txtRkSteps.fill = GridBagConstraints.HORIZONTAL;
@@ -570,7 +592,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		//*****************************************************************
 		
 		if(object.getSource() == txtDt){
-			fs.dt = textToFloat(txtDt.getText(), 0.001f, 1f, fs.dt, 1);
+			fs.dt = textToFloat(txtDt.getText(), 0.001f, 20f, fs.dt, 1);
 			txtDt.setText(String.valueOf(fs.dt));
 		}
 		else if(object.getSource() == txtTlr){
@@ -596,10 +618,6 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		else if(object.getSource() == txtRkSteps){
 		fs.rkSteps  = (int) textToFloat(txtRkSteps.getText(), 0,10, fs.rkSteps,1);
 		txtRkSteps.setText(String.valueOf(fs.rkSteps));
-		if (fs.rkSteps==1) fs.rk=false;
-		else fs.rk=true;
-		System.out.println("horray");
-		System.out.println(fs.rkSteps);
 		}
 		// Button Input
 		//*****************************************************************
@@ -629,29 +647,36 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		
 		// Menu Input
 		//*****************************************************************
-		else if (object.getSource() == reset){
+		else if (object.getSource() == menu_reset){
 			reset();
 		}
-		else if (object.getSource() == close){
+		else if (object.getSource() == menu_close){
     	   System.exit(0);
 		}
-		else if (object.getSource() == debug){
+		else if (object.getSource() == menu_debug){
     	   dispDebug= !dispDebug;
           
 		}
 		
-		else if (object.getSource() == vectors){
+		else if (object.getSource() == menu_vectors){
     	   dispVec=!dispVec; 
 		}
-		else if (object.getSource() == stepcount){
+		else if (object.getSource() == menu_stepcount){
     	   dispSteps=!dispSteps; 
 		}
-		else if (object.getSource() == vort){
-    	   dispVort=!dispVort;
-    	   if(dispVort) vort.setText("Clouds");
-    	   else vort.setText("Temperature");
+		else if (object.getSource() == menu_cloud){
+    	   dispMain = 0;
 		}
-		if (object.getSource() == paintVel){
+		else if (object.getSource() == menu_temp){
+			dispMain =1;
+		}
+		else if (object.getSource() == menu_vel){
+			dispMain =2;
+		}
+		else if (object.getSource() == menu_dens){
+			dispMain =3;
+		}
+		else if (object.getSource() == paintVel){
     	   mVel=!mVel;
 		}
 		if (object.getSource() == paintVapor){
@@ -659,9 +684,14 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		}
        
      
+		fp.outFields();
+		fp.repaint();
 	}
 
 	static boolean mouseDown = false;
+	
+			
+	
 	private JPanel settingsPanel;
 	private JLabel lblVorticityConfinement;
 	private JLabel lblBuoyancy;

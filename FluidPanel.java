@@ -11,28 +11,25 @@ public class FluidPanel extends JPanel{
 	
 	static BufferedImage img;
 	static Graphics2D onimg;
-	static float[][] pixelField1,pixelField2, ptField, u,v;
 	static FluidSolver fs;
-	static int sx,sy,ssx,ssy;
 	static float scaleOut;
-	static float mapScale;
-	static int qc,qv;
+	static float[][] out_1,out_2, out_u, out_v, out_pt, out_d;
+	static int c_qc, c_qv,c_pt,c_u,c_v, c_vort, c_d;
+	FluidSolver f;
 	
-	public FluidPanel(FluidSolver f){
-		//fs=f;
-		sx=FluidViewer.sx;
-		sy=FluidViewer.sy;
-		ssx=FluidViewer.ssx;
-		ssy=FluidViewer.ssy;
+	
+	public FluidPanel(FluidSolver f_solver, float scale){
+		f=f_solver;
+		scaleOut= scale;
 		
-		scaleOut= FluidViewer.scaleOut;
+		out_1 = new float[f.sx][f.sy];
+		out_2 = new float[f.sx][f.sy];
+		out_u = new float[f.sx][f.sy];
+		out_v = new float[f.sx][f.sy];
+		out_pt = new float[f.sx][f.sy];
+		out_d = new float[f.sx][f.sy];
 		
-		
-		pixelField1 = new float[sx][sy];
-		pixelField2 = new float[sx][sy];
-		
-		ptField = new float[sx][sy];
-		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
+		img = new BufferedImage(f.sx, f.sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
 		
 
@@ -40,100 +37,125 @@ public class FluidPanel extends JPanel{
 	
 	
 
-	public void update(Graphics g){ paint(g); }
+	public void update(Graphics g){ 
+		paint(g); }
 
-	// Paint Panel
-	@Override
-	public void paintComponent(Graphics g) {
-		super.paintComponent(g);
-		
 	
-		// BiLinear interpolation SimGrid to Pixels
-				if(!FluidViewer.dispVort)
-					//pixelField1 = evaluate(FluidViewer.fs.qv);
-					pixelField1 = evaluate(FluidViewer.fs.d);
-					mapScale= 1f;
-					//pixelField2 = evaluate(FluidViewer.fs.qc);
+	public void outFields(){
+		if(FluidViewer.dispMain==0){	
+			out_1  = evaluate(f.qc);
+			out_2  = evaluate(f.qv);
+		}	
+		else if(FluidViewer.dispMain==1){
+			out_pt = evaluate(f.pt);
+		}
+		else if(FluidViewer.dispMain==2){
+			out_u  = evaluate(f.u);
+			out_v  = evaluate(f.v);
+		}
+		else if(FluidViewer.dispMain==3){
+			out_d = evaluate(f.d);
+		}
+		
+		
+
+		WritableRaster raster= img.getRaster();
+		int[] d = new int[3];
+		
+		for(int i=0; i<f.sx; i++){
+			for(int j=0; j<f.sy; j++){
+			
+				// Background Color
+				//*********************************************************
+			 	d[0]=51; d[1]=102; d[2]=153; 
+				
+				// Cloud Out
+				//*********************************************************
+				if(FluidViewer.dispMain==0){	
+					c_qc =(int)((500*out_1[i][f.sy-1-j])*255);
+					c_qc = c_qc<0 ? 0:c_qc; 
+					c_qv =(int)(10f*(out_2[i][f.sy-1-j])*255);
+					c_qv = c_qv<0 ? 0:c_qv; 
 					
-				if(FluidViewer.dispVort)
-					ptField=evaluate(FluidViewer.fs.pt);
+					d[0] = Math.min(255, d[0]+c_qc);
+					d[1] = Math.min(255, d[1]+c_qc+c_qv);
+					d[2] = Math.min(255, d[2]+c_qc);
+				}
 				
-				onimg.setColor(Color.red);
-				u = evaluate(FluidViewer.fs.u);
-				v = evaluate(FluidViewer.fs.v);
-				
-				WritableRaster raster= img.getRaster();
-				
-				// output Pixel Field
-				for(int i=0; i<sx; i++){
-					for(int j=0; j<sy; j++){
+				// Temperature Out
+				//*********************************************************
+				if(FluidViewer.dispMain==1){
+					c_pt = (int) out_pt[i][f.sy-1-j];
+					c_pt = c_pt>254 ? 255:c_pt; 
 					
-						int v = (int) ptField[i][sy-1-j];
-						//v = v>254 ? 255:v; 
-						
-						// cloud vapor
-						qv =(int)((1f*pixelField1[i][sy-1-j])*255);
-						qv = qv<0 ? 0:qv; 
-						
-						//cloud water
-						//qc =(int)((100*pixelField2[i][sy-1-j])*255);
-						//qc = qc<0 ? 0:qc; 
-						
-					
-						
-						// Background Color
-					 	
-						int[] d = new int[3];	
-						d[0]=51; d[1]=102; d[2]=153; 
-						//qc=0;
-						
-						
-						//d[0]=d[1]=d[2]=0; 
-						
-						d[0] = Math.min(255, d[0]+qc);
-						d[1] = Math.min(255, d[1]+qc+qv);
-						d[2] = Math.min(255, d[2]+qc);
-						
-						d[0] = Math.min(255, qv);
-						d[1] = Math.min(255, qv);
-						d[2] = Math.min(255, qv);
-						
-						if(FluidViewer.dispVort){	
-							d[0]=heatColor(v).getRed();
-							d[1]=heatColor(v).getGreen();
-							d[2]=heatColor(v).getBlue();
-						}	
+					d[0]=heatColor(c_pt).getRed();
+					d[1]=heatColor(c_pt).getGreen();
+					d[2]=heatColor(c_pt).getBlue();
+				}
 				
-						raster.setPixel(i,j,d);	
+				// Velocity Out
+				//*********************************************************
+				if(FluidViewer.dispMain==2){
+					c_u =(int)(1f*(out_u[i][f.sy-1-j])*255);
+					c_u = c_u<0 ? 0:c_u; 
+					c_v =(int)(1f*(out_v[i][f.sy-1-j])*255);
+					c_v = c_v<0 ? 0:c_v; 
+					
+					d[0] = Math.min(255, c_u);
+					d[1] = Math.min(255, c_v);
+					d[2] = Math.min(255, 0);
+				}
+				
+				// Density Out
+				//*********************************************************
+				if(FluidViewer.dispMain==3){
+					c_d =(int)(1f*(out_d[i][f.sy-1-j])*255);
+					c_d = c_d<0 ? 0:c_d; 
+					
+					
+					d[0] = Math.min(255, c_d);
+					d[1] = Math.min(255, c_d);
+					d[2] = Math.min(255, c_d);
+				}
+				
+				raster.setPixel(i,j,d);			
 			}
 		}
 		
+		
+		
+	}
+	// Paint Panel
+	@Override
+	public void paintComponent(Graphics g) {
+		
+		super.paintComponent(g);
+		
+		
+
 		// paint Vectors
-		int u1,v1;
+		
+		if(FluidViewer.dispVec){
+			int u1,v1;
 			
-		for(int i=5; i<sx; i+=10){
-			for(int j=5; j<sy; j+=10){
+			for(int i=5; i<f.sx; i+=10){
+				for(int j=5; j<f.sy; j+=10){
 					
-				if(FluidViewer.dispVec){
-				u1 = (int) (7 * u[i][sy-1-j] );
-				v1 = (int) (-7* v[i][sy-1-j]);
-				onimg.setColor(Color.red);
-				onimg.drawLine(i, j, i+u1, j+v1);
-				}
+					u1 = (int) (out_u[i][f.sy-1-j]*7);
+					v1 = (int) (out_v[i][f.sy-1-j]*-7);
 					
-				if(i%100==35&&j%100==35&&FluidViewer.dispVal){
-					onimg.setColor(Color.gray);
-					onimg.drawString("u="+(u[i][j]),i,j);
-					onimg.drawString("v="+(v[i][j]),i,j+10);
-				}
-			}	
+					onimg.setColor(Color.red);
+					onimg.drawLine(i, j, i+u1, j+v1);
+					
+					}
+				}	
 		}
 		
 		
 		if(FluidViewer.dispSteps){
 		// Display frame number
 		onimg.setColor(Color.magenta);
-		onimg.drawString("Frame:"+FluidViewer.fs.step,8,15);
+		onimg.drawString("Frame:"+f.step,8,15);
 		}
 		// image on Panel
 		g.drawImage(img,0,0,this);
@@ -147,15 +169,19 @@ public class FluidPanel extends JPanel{
 	
 	
 	
-	public float[][] evaluate(float[][] f){
-		float[][] mapped = new float[sx][sy];
+	public float[][] evaluate(float[][] field){
+		float[][] mapped = new float[f.sx][f.sy];
 		
-		for(int i=0; i<sx; i++){
-			for(int j=0; j<sy; j++){
-				mapped[i][j]= interpolate((float)(i/scaleOut+1),(float) (j/scaleOut+1),f); //f[(int) (i/scaleOut+1)][(int) (j/scaleOut+1)];	
+		for(int i=0; i<f.sx; i++){
+			for(int j=0; j<f.sy; j++){
+				mapped[i][j]= interpolate((float)(i/scaleOut+1),(float) (j/scaleOut+1),field); //f[(int) (i/scaleOut+1)][(int) (j/scaleOut+1)];	
 			}
 		}
 		return mapped;
+	}
+	
+	public float evaluate(float[][] f, int x, int y){
+		return interpolate((float)(x/scaleOut+1),(float) (y/scaleOut+1),f); 	
 	}
 	
 	
