@@ -104,7 +104,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	}
 	public static void init(){
 
-		dispMain = 2;
+		dispMain = 0;
 		
 		mx=my=myOld=mxOld=0;
 		
@@ -115,7 +115,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		sx = (int)scaleOut*ssx;
 		sy = (int)scaleOut*ssy;
 		//setup FluidSolver size
-		fs.setup(ssx, ssy, 20.0F, scaleOut);
+		fs.setup(ssx, ssy, 1.0F, scaleOut);
 		fp = new FluidPanel(fs, scaleOut);
 		fp.setBounds(5, 26, sx, sy);
 		
@@ -469,7 +469,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        txtRkSteps.addActionListener(this);
 	        
 	        JLabel lblRungeKutta = new JLabel("Runge Kutta");
-	        lblRungeKutta.setToolTipText("Enables a 2nd order Runge Kutta integration method for the advection. If deactivated linear less exact Eulerstep is used.");
+	        lblRungeKutta.setToolTipText("0 = McCormack || 1 = Eulerstep || 2 = RK2 .");
 	        lblRungeKutta.setForeground(Color.LIGHT_GRAY);
 	        lblRungeKutta.setFont(new Font("Monospaced", Font.PLAIN, 11));
 	        GridBagConstraints gbc_lblRungeKutta = new GridBagConstraints();

@@ -3,7 +3,7 @@
 public class FluidSolver {
 	
 	float qc_max=0;
-	int rkSteps=5;
+	int rkSteps=1;
 	 
 	// Simulator quantities
 	//************************************************************
@@ -140,9 +140,9 @@ public class FluidSolver {
 			}
 		}
 		
-		v = Field.boxField(ssx,ssy,1f);
-		//u = Field.circFieldU(ssx,ssy,1f);
-		d = Field.checkerField(ssx,ssy,1f);
+		//v = Field.circFieldV(ssx,ssy,1f);
+		//u = Field.constField(ssx,ssy,1f);
+		//d = Field.boxField(ssx,ssy,1f);
 		
 		// Initialize absolute Temp lookup
 		//************************************************************
@@ -195,7 +195,7 @@ public class FluidSolver {
 		time=time+dt;
 		step++;
 		solveVel();
-		solveDens();
+		//solveDens();
 	}
 	
 	public void debugLine(String a){
@@ -217,29 +217,29 @@ public class FluidSolver {
 		
 		//add moving vel Source
 		//addSource(v,Field.smlBoxField(ssx,ssy,0.5f));
-		//addSource(u,Field.smlBoxField(ssx,ssy,(float) Math.sin(step*0.2)));
+		//addSource(v,Field.smlBoxField(ssx,ssy,-Math.min(0,(float) Math.sin(step*0.1) ) ) );
 		
-		//vorticityConf(uOld, vOld, vort);
-		//addSource(u,uOld);
-		//addSource(v,vOld);
+		vorticityConf(uOld, vOld, vort);
+		addSource(u,uOld);
+		addSource(v,vOld);
 		
-		//project(u,v,uOld,vOld);
+		project(u,v,uOld,vOld);
 		
-		//buoyancy(vOld, buoyancy);
-		//addSource(v,vOld);
+		buoyancy(vOld, buoyancy);
+		addSource(v,vOld);
 		
-		//swapQv(); swapQc(); swapPt();
+		swapQv(); swapQc(); swapPt();
 		//copy(qv,qvOld); copy(qc,qcOld);copy(pt,ptOld);
-		//advect(4, qv, qvOld, u, v);
-		//advect(5, qc, qcOld, u, v);
-		//advect(3, pt, ptOld, u, v);
+		advect(4, qv, qvOld, u, v);
+		advect(5, qc, qcOld, u, v);
+		advect(3, pt, ptOld, u, v);
 		
 		swapU(); swapV();
 		//copy(u,uOld); copy(v,vOld);	
 		advect(1, u, uOld, uOld, vOld);
 		advect(2, v, vOld, uOld, vOld);
 		
-		//waterCont();
+		waterCont();
 		
 		//diffuse(1, u, uOld, visc, dt);
 		//diffuse(2, v, vOld, visc, dt);
@@ -274,6 +274,7 @@ public class FluidSolver {
 		//debugLine("after sourceAdd");
 		// add moving vel Source
 		//addSource(d,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,1f));
+		//addSource(d,Field.smlBoxField(ssx,ssy,0.0415f));
 		
 		//swapD();
 		//debugLine("after swap");
@@ -285,7 +286,7 @@ public class FluidSolver {
 		//debugLine("after swap");
 		
 		//advect(0,d,dOld,u,v);
-		advect(4,d,dOld,u,v);
+		advect(5,d,dOld,u,v);
 		//debugLine("after advection");
 		//copy(d,dOld);
 		
@@ -376,61 +377,83 @@ public class FluidSolver {
 			offset_y = 0.5f;
 		}
 		
+		if (rkSteps==0){
 		//**********************************************************************************
 		// McCormack
-		float phi_n_x, 		phi_n_y;
-		float phi_n_hat_x, 	phi_n_hat_y;
-		float phi_n1_hat_x,	phi_n1_hat_y;
-		
-		for (int i=1; i<=ssx; i++){
-			for (int j=1; j<=ssy; j++){
-				// generate particle at position [x|y]
-				phi_n_x = (i+offset_x) ;
-				phi_n_y = (j+offset_y) ;
-				
-				// send particle forward to phi_n1_hat
-				phi_n1_hat_x = phi_n_x -  dt * interpolate(phi_n_x		, phi_n_y-0.5f	,u) ;
-				phi_n1_hat_y = phi_n_y -  dt * interpolate(phi_n_x-0.5f	, phi_n_y		,v) ;
-				
-				// send particle back from phi_n1_hat to phi_n_hat
-				phi_n_hat_x = phi_n1_hat_x +  dt * interpolate(phi_n1_hat_x		, phi_n_y-0.5f 	,u) ;
-				phi_n_hat_y = phi_n1_hat_y +  dt * interpolate(phi_n1_hat_x-0.5f, phi_n_y		,v) ;
-				
-				// calculate phi_n1
-				x =  phi_n1_hat_x + 0.5f * (phi_n_x - phi_n_hat_x);
-				y =  phi_n1_hat_y + 0.5f * (phi_n_y - phi_n_hat_y);
-				
-				// interpolate the value of old field
-				if(b==4) 
-					a[i][j] = (float)interpolatePer(x-offset_x, y-offset_y, aOld);
-				else
-					a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld);
+			float phi_n_x, 		phi_n_y;
+			float phi_n_hat_x, 	phi_n_hat_y;
+			float phi_n1_hat_x,	phi_n1_hat_y;
+			
+			for (int i=1; i<=ssx; i++){
+				for (int j=1; j<=ssy; j++){
+					// generate particle at position [x|y]
+					phi_n_x = (i+offset_x) ;
+					phi_n_y = (j+offset_y) ;
+					
+					// send particle back to phi_n1_hat
+					phi_n1_hat_x = phi_n_x -  dt * interpolate(phi_n_x		, phi_n_y-0.5f	,u) ;
+					phi_n1_hat_y = phi_n_y -  dt * interpolate(phi_n_x-0.5f	, phi_n_y		,v) ;
+					
+					// send particle forward from phi_n1_hat to phi_n_hat
+					phi_n_hat_x = phi_n1_hat_x +  dt * interpolate(phi_n1_hat_x		, phi_n_y-0.5f 	,u) ;
+					phi_n_hat_y = phi_n1_hat_y +  dt * interpolate(phi_n1_hat_x-0.5f, phi_n_y		,v) ;
+					
+					// calculate phi_n1
+					x =  phi_n1_hat_x + 0.5f * (phi_n_x - phi_n_hat_x);
+					y =  phi_n1_hat_y + 0.5f * (phi_n_y - phi_n_hat_y);
+					
+					int lim_x = (int)(phi_n1_hat_x - offset_x);
+					int lim_y = (int)(phi_n1_hat_y - offset_y);
+					
+					// Limiter - set result to range of first eulerstep.
+					//float test = (float)interpolate(50,20, aOld);
+					float l_1 = (float)interpolate(lim_x + 0,lim_y +0, aOld);
+					float l_2 = (float)interpolate(lim_x + 1,lim_y +0, aOld);
+					float l_3 = (float)interpolate(lim_x + 0,lim_y +1, aOld);
+					float l_4 = (float)interpolate(lim_x + 1,lim_y +1, aOld);
+					
+					float max = Math.max(Math.max(Math.max(l_1, l_2),l_3),l_4);
+					float min = Math.min(Math.min(Math.min(l_1, l_2),l_3),l_4);
+					
+					
+					
+					// interpolate the value of old field
+					if(b==14) {
+						a[i][j] = (float)interpolatePer(x-offset_x, y-offset_y, aOld);
+						a[i][j] = Math.min( Math.max(a[i][j], min), max);
+					}
+					else{
+						a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld);
+						a[i][j] = Math.min( Math.max(a[i][j], min), max);
+					}
+					
+				}
 			}
 		}
-		
+		else{
 		//**********************************************************************************
 		// Runge Kutta
-		/*
-		for (int i=1; i<=ssx; i++){
-			for (int j=1; j<=ssy; j++){
-				// generate particle at position [x|y]
-				x = (i+offset_x) ;
-				y = (j+offset_y) ;
-				
-				// send particle backward at current timestep
-				for(int k=0; k<rkSteps; k++){
-					x = x -  (float)(1f/rkSteps) * dt * interpolate(x, y-0.5f, u);
-					y = y -  (float)(1f/rkSteps) * dt * interpolate(x-0.5f, y, v);
+		
+			for (int i=1; i<=ssx; i++){
+				for (int j=1; j<=ssy; j++){
+					// generate particle at position [x|y]
+					x = (i+offset_x) ;
+					y = (j+offset_y) ;
+					
+					// send particle backward at current timestep
+					for(int k=0; k<rkSteps; k++){
+						x = x -  (float)(1f/rkSteps) * dt * interpolate(x, y-0.5f, u);
+						y = y -  (float)(1f/rkSteps) * dt * interpolate(x-0.5f, y, v);
+					}
+					
+					// interpolate the value of old field
+					if(b==4) 
+						a[i][j] = (float)interpolatePer(x-offset_x, y-offset_y, aOld);
+					else
+						a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld);
 				}
-				
-				// interpolate the value of old field
-				if(b==4) 
-					a[i][j] = (float)interpolatePer(x-offset_x, y-offset_y, aOld);
-				else
-					a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld);
 			}
 		}
-		*/
 		setBounds(b,a);
 	}
 
@@ -847,7 +870,7 @@ public void setBounds (int b, float[][] f){
 	public float interpolatePer(float xpos, float ypos, float[][] f){
 		
 		// Position Particle over boarder
-		if(xpos<(1)){		xpos = (ssx+1) - (1-xpos);}
+		if(xpos<1){		xpos = (ssx+1) - (1-xpos);}
 		else if(xpos>=((ssx+1))){	xpos = 1 + ( xpos - (ssx+1) );}
 		
 		// Sample positions
@@ -866,7 +889,8 @@ public void setBounds (int b, float[][] f){
 		}
 		//System.out.println(xpos);
 		if (ypos<0){ypos=0;} 
-		if (ypos>=ssy+1){ypos=(ssy+0.999999999999f);}
+		if (ypos>=ssy+1){
+			ypos=(ssy+0.99998f);}
 		
 		y1 = (int) Math.floor(ypos);
 		y2 = y1+1;

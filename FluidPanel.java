@@ -42,7 +42,8 @@ public class FluidPanel extends JPanel{
 
 	
 	public void outFields(){
-		if(FluidViewer.dispMain==0){	
+		
+		if(FluidViewer.dispMain==0 ){	
 			out_1  = evaluate(f.qc);
 			out_2  = evaluate(f.qv);
 		}	
@@ -56,7 +57,10 @@ public class FluidPanel extends JPanel{
 		else if(FluidViewer.dispMain==3){
 			out_d = evaluate(f.d);
 		}
-		
+		if(FluidViewer.dispVec){
+			out_u  = evaluate(f.u);
+			out_v  = evaluate(f.v);
+		}
 		
 
 		WritableRaster raster= img.getRaster();
