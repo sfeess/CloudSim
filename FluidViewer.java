@@ -104,12 +104,12 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	}
 	public static void init(){
 
-		dispMain = 0;
+		dispMain = 3;
 		
 		mx=my=myOld=mxOld=0;
 		
 		ssy = 200;
-		ssx = 200;
+		ssx = 150;
 		scaleOut = 2;
 		
 		sx = (int)scaleOut*ssx;
@@ -270,9 +270,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        frame.getContentPane().add(settingsPanel);
 	        GridBagLayout gbl_settingsPanel = new GridBagLayout();
 	        gbl_settingsPanel.columnWidths = new int[] {60, 0};
-	        gbl_settingsPanel.rowHeights = new int[]{20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	        gbl_settingsPanel.rowHeights = new int[]{20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	        gbl_settingsPanel.columnWeights = new double[]{1.0, 1.0};
-	        gbl_settingsPanel.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+	        gbl_settingsPanel.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
 	        settingsPanel.setLayout(gbl_settingsPanel);
 	        
 	        JLabel lblInitialValuesrestart = new JLabel("Initial Values");
@@ -455,29 +455,63 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        gbc_lblSimulationDetail.gridy = 8;
 	        settingsPanel.add(lblSimulationDetail, gbc_lblSimulationDetail);
 	        
-	        txtRkSteps = new JTextField();
-	        txtRkSteps.setForeground(Color.WHITE);
-	        txtRkSteps.setBackground(Color.GRAY);
-	        txtRkSteps.setText(String.valueOf(fs.rkSteps));
-	        GridBagConstraints gbc_txtRkSteps = new GridBagConstraints();
-	        gbc_txtRkSteps.insets = new Insets(0, 5, 5, 5);
-	        gbc_txtRkSteps.fill = GridBagConstraints.HORIZONTAL;
-	        gbc_txtRkSteps.gridx = 0;
-	        gbc_txtRkSteps.gridy = 9;
-	        settingsPanel.add(txtRkSteps, gbc_txtRkSteps);
-	        txtRkSteps.setColumns(10);
-	        txtRkSteps.addActionListener(this);
+	       
 	        
-	        JLabel lblRungeKutta = new JLabel("Runge Kutta");
-	        lblRungeKutta.setToolTipText("0 = McCormack || 1 = Eulerstep || 2 = RK2 .");
-	        lblRungeKutta.setForeground(Color.LIGHT_GRAY);
-	        lblRungeKutta.setFont(new Font("Monospaced", Font.PLAIN, 11));
-	        GridBagConstraints gbc_lblRungeKutta = new GridBagConstraints();
-	        gbc_lblRungeKutta.insets = new Insets(0, 0, 5, 0);
-	        gbc_lblRungeKutta.anchor = GridBagConstraints.WEST;
-	        gbc_lblRungeKutta.gridx = 1;
-	        gbc_lblRungeKutta.gridy = 9;
-	        settingsPanel.add(lblRungeKutta, gbc_lblRungeKutta);
+	        JLabel lblIntegration = new JLabel("Integration");
+	        lblIntegration.setToolTipText("");
+	        lblIntegration.setForeground(Color.LIGHT_GRAY);
+	        lblIntegration.setFont(new Font("Monospaced", Font.PLAIN, 11));
+	        GridBagConstraints gbc_lblIntegration = new GridBagConstraints();
+	        gbc_lblIntegration.insets = new Insets(0, 0, 5, 0);
+	        gbc_lblIntegration.anchor = GridBagConstraints.WEST;
+	        gbc_lblIntegration.gridx = 1;
+	        gbc_lblIntegration.gridy = 9;
+	        settingsPanel.add(lblIntegration, gbc_lblIntegration);
+	        
+	        String[] integr = {"Euler", "RungeKutta2", "McCormack"};
+	        comboBox_igr = new JComboBox<Object>(integr);
+	        comboBox_igr.setSelectedIndex(fs.intergrationMethod-1);
+	        comboBox_igr.setToolTipText("Integration Method");
+	        comboBox_igr.setFont(new Font("Monospaced", Font.PLAIN, 11));
+	        comboBox_igr.setBackground(Color.GRAY);
+	        comboBox_igr.setForeground(Color.WHITE);
+	        comboBox_igr.addActionListener(this);
+	        
+	        GridBagConstraints gbc_comboBox_igr = new GridBagConstraints();
+	        gbc_comboBox_igr.gridwidth = 2;
+	        gbc_comboBox_igr.insets = new Insets(0, 5, 5, 5);
+	        gbc_comboBox_igr.fill = GridBagConstraints.HORIZONTAL;
+	        gbc_comboBox_igr.gridx = 0;
+	        gbc_comboBox_igr.gridy = 10;
+	        settingsPanel.add(comboBox_igr, gbc_comboBox_igr);
+	        
+	        String[] interp = {"Linear", "Cubic"};
+	        comboBox_ipl = new JComboBox<Object>(interp);
+	        comboBox_ipl.setSelectedIndex(fs.interpolationMethod);
+	        comboBox_ipl.setToolTipText("Interpolation Method");
+	        comboBox_ipl.setForeground(Color.WHITE);
+	        comboBox_ipl.setBackground(Color.GRAY);
+	        comboBox_ipl.setFont(new Font("Monospaced", Font.PLAIN, 11));
+	        comboBox_ipl.addActionListener(this);
+	        
+	        JLabel lblInterpolation = new JLabel("Interpolation");
+	        lblInterpolation.setFont(new Font("Monospaced", Font.PLAIN, 11));
+	        lblInterpolation.setForeground(Color.LIGHT_GRAY);
+	        GridBagConstraints gbc_lblInterpolation = new GridBagConstraints();
+	        gbc_lblInterpolation.anchor = GridBagConstraints.WEST;
+	        gbc_lblInterpolation.insets = new Insets(0, 0, 5, 0);
+	        gbc_lblInterpolation.gridx = 1;
+	        gbc_lblInterpolation.gridy = 11;
+	        settingsPanel.add(lblInterpolation, gbc_lblInterpolation);
+	        
+	        GridBagConstraints gbc_comboBox_ipl = new GridBagConstraints();
+	        gbc_comboBox_ipl.gridwidth = 2;
+	        gbc_comboBox_ipl.insets = new Insets(0, 5, 5, 5);
+	        gbc_comboBox_ipl.fill = GridBagConstraints.HORIZONTAL;
+	        gbc_comboBox_ipl.gridx = 0;
+	        gbc_comboBox_ipl.gridy = 12;
+	        settingsPanel.add(comboBox_ipl, gbc_comboBox_ipl);
+	        
 			
 			
 			JPanel debugValues = new JPanel();
@@ -578,7 +612,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		lblDebugvalue3.setText("pt: "+FluidViewer.fs.pt[x][y]);
 		lblDebugvalue4.setText("qc: "+FluidViewer.fs.qc[x][y]);
 		lblDebugvalue5.setText("qv: "+FluidViewer.fs.qv[x][y]);
-		lblDebugvalue6.setText("d:  "+FluidViewer.fs.d[x][y]);
+		lblDebugvalue6.setText("solid:  "+FluidViewer.fs.solid[x][y]);
 	}
 	
 	// linearisierung NUR FÜR PIXELFIELD!!! nicht sim grid
@@ -615,10 +649,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 			fs.maxAlt = textToFloat(txtAlt.getText(), 0,10000, fs.maxAlt,1);
 			txtAlt.setText(String.valueOf(fs.maxAlt));
 		}
-		else if(object.getSource() == txtRkSteps){
-		fs.rkSteps  = (int) textToFloat(txtRkSteps.getText(), 0,10, fs.rkSteps,1);
-		txtRkSteps.setText(String.valueOf(fs.rkSteps));
-		}
+		
 		// Button Input
 		//*****************************************************************
 		else if(object.getSource() == btnPlay ){
@@ -643,6 +674,20 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 			
 			writeTxt = cbox_WriteTxt.isSelected();
 			writeImg = cbox_WriteImg.isSelected();
+		}
+		
+		// List Input
+		//*****************************************************************
+		else if(object.getSource() == comboBox_ipl){
+			if(comboBox_ipl.getSelectedIndex()==0)fs.interpolationMethod = 0;
+			if(comboBox_ipl.getSelectedIndex()==1)fs.interpolationMethod = 1;
+		}
+		
+		else if(object.getSource() == comboBox_igr){
+			if(comboBox_igr.getSelectedIndex()==0)fs.intergrationMethod = 1;
+			if(comboBox_igr.getSelectedIndex()==1)fs.intergrationMethod = 2;
+			if(comboBox_igr.getSelectedIndex()==2)fs.intergrationMethod = 3;
+			
 		}
 		
 		// Menu Input
@@ -706,7 +751,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	private JLabel lblInteractivValues;
 	private JTextField txtDt;
 	private JLabel lblSimulationDetail;
-	private JTextField txtRkSteps;
+	private JComboBox<Object> comboBox_igr;
+	private JComboBox<Object> comboBox_ipl;
 	
 	@Override
 	public void mouseClicked(MouseEvent obj) {

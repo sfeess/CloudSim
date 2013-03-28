@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 
 
 public class Field {
@@ -86,6 +87,38 @@ public class Field {
 	}
 	
 	
+	
+	public static int[][] boxField(int x, int y, int v){
+		int[][] field = new int[(x+2)][(y+2)];
+		// Feld füllen
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+
+				//if(i>(x/2-x/6) && i<(x/2+x/6) && j>(y/2-y/6) && j<(y/2+y/6)){
+				if(i>(x/2-x/6) && i<(x/2+x/6) && j>(y/4-y/6) && j<(y/4+y/6)){
+				field[i][j] = v;}
+				else {field[i][j] =0;}
+				
+			}
+		}
+		return field;	
+	}
+	
+	public static float[][] smlBoxField3(int x, int y, float v){
+		float[][] field = new float[(x+2)][(y+2)];
+		// Feld füllen
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+
+				if(i>(x/6-x/20) && i<(x/6+x/20) && j>(y*1/6-y/20) && j<(y*1/6+y/20)){
+				field[i][j] = v;}
+				else {field[i][j] =0F;}
+			
+			}
+		}
+		return field;	
+	}
+	
 	public static float[][] smlBoxField(int x, int y, float v){
 		float[][] field = new float[(x+2)][(y+2)];
 		// Feld füllen
@@ -101,16 +134,67 @@ public class Field {
 		return field;	
 	}
 	
+	public static int[][] smlBoxField2(int x, int y, int v){
+		int[][] field = new int[(x+2)][(y+2)];
+		// Feld füllen
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+
+				if(i>(x/2-x/20) && i<(x/2+x/20) && j>(y-y*1/2-y/20) && j<(y-y*1/2+y/20)){
+				field[i][j] = v;}
+				else {field[i][j] =0;}
+			
+			}
+		}
+		return field;	
+	}
 	
-	public static float[][] lineField(int x, int y){
+	
+	
+	public static float[][] pointsField(int x, int y, float v){
+		float[][] field = new float[(x+2)][(y+2)];
+		// Feld füllen
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+
+				if((i==30 || i==30) && (j%10==0 || (j)%10==0)){
+					field[i][j] = v;}
+				else {field[i][j] =0f;}
+			
+			}
+		}
+		return field;	
+	}
+	
+	public static float[][] lineField(int x, int y, float v){
 		float[][] field = new float[(x+2)][(y+2)];
 		// Feld füllen
 		
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
 
-				if(i>(x/2-x/8) && i<(x/2+x/8)){
-				field[i][j] = 1F;}
+				if(i>(x/2-x/8) && i<(x/2+x/8) && j<(y-5) && j>5){
+					field[i][j] = v;}
+				else {field[i][j] =0F;
+				
+				if(i==0 || i==x+1 || j==0 || j==y+1)
+					field[i][j] =0F;
+				}
+			
+			}
+		}
+		return field;	
+	}	
+	
+	public static float[][] lineFieldLeft(int x, int y, float v){
+		float[][] field = new float[(x+2)][(y+2)];
+		// Feld füllen
+		
+		for(int i=0; i<x+2; i++){
+			for(int j=0; j<y+2; j++){
+
+				if(i>(x/8) && i<(x/4) && j<(y-5) && j>5){
+					field[i][j] = v;}
 				else {field[i][j] =0F;
 				
 				if(i==0 || i==x+1 || j==0 || j==y+1)
@@ -187,6 +271,34 @@ public class Field {
 		return field;
 	}
 	
+	
+	public static int[][] imgFieldSolid(int x, int y){
+		BufferedImage img = null;
+		
+		// Bild einlesen
+		try {
+			img = ImageIO.read(new File("cdot.bmp"));
+		} catch (IOException e) {
+			System.out.println("fehler");
+			e.printStackTrace();
+		}
+		int h = img.getHeight(null);
+		int w = img.getWidth(null);
+
+		// Testfeld für bilddaten  anlegen
+		int[][] field = new int[(x+2)][(y+2)];
+		WritableRaster raster= img.getRaster();
+		
+		// Bilddaten in testfeld schrieben
+		for (int i=0; i<x+2; i++){
+			for (int j=0; j<y+2; j++){
+				int c = 0;
+				if(i<w && j<h)c = raster.getSample(i,j, 0);
+				field[i][y+1-j]= c<2 ? 0 : 1;
+			}
+		}
+		return field;
+	}
 	
 	/**
 	 * 

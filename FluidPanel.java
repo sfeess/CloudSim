@@ -78,7 +78,7 @@ public class FluidPanel extends JPanel{
 				if(FluidViewer.dispMain==0){	
 					c_qc =(int)((500*out_1[i][f.sy-1-j])*255);
 					c_qc = c_qc<0 ? 0:c_qc; 
-					c_qv =(int)(10f*(out_2[i][f.sy-1-j])*255);
+					c_qv =(int)(20f*(out_2[i][f.sy-1-j])*255);
 					c_qv = c_qv<0 ? 0:c_qv; 
 					
 					d[0] = Math.min(255, d[0]+c_qc);
@@ -174,19 +174,20 @@ public class FluidPanel extends JPanel{
 	
 	
 	public float[][] evaluate(float[][] field){
+		
+		//Interpolation.setSpace(f.sx, f.sy);
 		float[][] mapped = new float[f.sx][f.sy];
 		
 		for(int i=0; i<f.sx; i++){
 			for(int j=0; j<f.sy; j++){
-				mapped[i][j]= interpolate((float)(i/scaleOut+1),(float) (j/scaleOut+1),field); //f[(int) (i/scaleOut+1)][(int) (j/scaleOut+1)];	
+				//mapped[i][j]= interpolate((float)(i/scaleOut+1),(float) (j/scaleOut+1),field); 
+				mapped[i][j] = Interpolation.biCubic((float)(i/scaleOut+1), (float) (j/scaleOut+1), field); 
 			}
 		}
 		return mapped;
 	}
 	
-	public float evaluate(float[][] f, int x, int y){
-		return interpolate((float)(x/scaleOut+1),(float) (y/scaleOut+1),f); 	
-	}
+	
 	
 	
 	public float interpolate(float xpos, float ypos, float[][] f){

@@ -94,7 +94,7 @@ public class DebugPanel extends JPanel {
 		lblDebugvalue3.setText(" pt: "+FluidViewer.fs.pt[x][y]);
 		lblDebugvalue4.setText(" qc: "+FluidViewer.fs.qc[x][y]);
 		lblDebugvalue5.setText(" qv: "+FluidViewer.fs.qv[x][y]);
-		lblDebugvalue6.setText(" d: "+FluidViewer.fs.d[x][y]);
+		lblDebugvalue6.setText(" solid: "+FluidViewer.fs.solid[x][y]);
 		
 		
 	}
