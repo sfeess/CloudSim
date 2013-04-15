@@ -5,10 +5,11 @@ public class FluidSolver {
 	float qc_max=0;
 	int intergrationMethod = 1;
 	int interpolationMethod = 0;
+	boolean collision = false;
 	 
 	// Simulator quantities
 	//************************************************************
-	int sx, sy;					//Pixelsize
+	int sx, sy;					// Pixelsize
 	int ssx, ssy;				// Gridsize (without +2 Boarder)
 	int size;					// Field length
 	int step;					// SimulationStep
@@ -19,7 +20,7 @@ public class FluidSolver {
 	//************************************************************
 	float[][] u, uOld, v, vOld;	// velocity in cells/sec
 	float[][] d, dOld;			// density
-	int[][] solid;			// solid obstacle
+	int[][] solid;				// solid obstacle
 	float[][] vorticity;		// Vorticity
 	float[][] temp;				// field to swap
 	float diff; 				// Viscosity 
@@ -103,10 +104,9 @@ public class FluidSolver {
 		
 		// Initialize Fluid 
 		//************************************************************
-		wind = -0.5f;
+		wind = 0.1f;
 		diff = 0.0000f;
 		visc = 0.000000000f;
-		
 		
 		
 		// Initialize Cloud constants
@@ -115,11 +115,11 @@ public class FluidSolver {
 		p0 = 		100;		// pressure at sea level (kPa)
 		grav = 		9.81f;		// gravitational acceleration (m/s²)
 		lh = 		2501;		// Latent heat of vaporization of water (J/kg)
-		cp = 		1005;		// specific heat cpapcity J/(kg K)
+		cp = 		1005;		// specific heat capacity J/(kg K)
 		
 		
 		// user defined
-		maxAlt = 	3000;		// altitude in meter on top of sim grid
+		maxAlt = 	6000;		// altitude in meter on top of sim grid
 		tlr = 		0.9f; 		// Kelvin per 100 meter between 0.55 and 0.99
 			tlr /= 	100; 		// Kelvin per 1 meter
 		t0 = 		295;		// temp on ground in Kelvin
@@ -146,8 +146,8 @@ public class FluidSolver {
 		
 		// v = Field.boxField(ssx,ssy,-1f);
 		//u = Field.lineFieldLeft(ssx,ssy,1f);
-		d = Field.boxField(ssx,ssy,1f);
-		//solid = Field.imgFieldSolid(ssx,ssy);
+		// d = Field.boxField(ssx,ssy,1f);
+		if(collision)solid = Field.imgFieldSolid(ssx,ssy,"berg.bmp");
 		
 		// Initialize absolute Temp lookup
 		//************************************************************
@@ -200,7 +200,7 @@ public class FluidSolver {
 		time=time+dt;
 		step++;
 		solveVel();
-		solveDens();
+		//solveDens();
 	}
 	
 	public void debugLine(String a){
@@ -221,32 +221,32 @@ public class FluidSolver {
 		//addSource(v,vOld);
 		
 		//add moving vel Source
-		//addSource(v,Field.smlBoxField(ssx,ssy,0.5f));
+		//addSource(v,Field.smlBoxField(ssx,ssy,0.3f));
 		//addSource(u, Field.smlBoxField3(ssx,ssy,0.2f));
 		//if(step<100)addSource(u, Field.lineFieldLeft(ssx,ssy,0.02f));
 		//addSource(v,Field.smlBoxField(ssx,ssy,-Math.min(0,(float) Math.sin(step*0.1) ) ) );
 		
-		//vorticityConf(uOld, vOld, vort);
-		//addSource(u,uOld);
-		//addSource(v,vOld);
+		vorticityConf(uOld, vOld, vort);
+		addSource(u,uOld);
+		addSource(v,vOld);
 		
 		project(u,v,uOld,vOld);
 		
-		//buoyancy(vOld, buoyancy);
-		//addSource(v,vOld);
+		buoyancy(vOld, buoyancy);
+		addSource(v,vOld);
 		
-		//swapQv(); swapQc(); swapPt();
+		swapQv(); swapQc(); swapPt();
 		//copy(qv,qvOld); copy(qc,qcOld);copy(pt,ptOld);
-		//advect(4, qv, qvOld, u, v);
-		//advect(5, qc, qcOld, u, v);
-		//advect(3, pt, ptOld, u, v);
+		advect(4, qv, qvOld, u, v);
+		advect(5, qc, qcOld, u, v);
+		advect(3, pt, ptOld, u, v);
 		
 		swapU(); swapV();
 		//copy(u,uOld); copy(v,vOld);	
 		advect(1, u, uOld, uOld, vOld);
 		advect(2, v, vOld, uOld, vOld);
 		
-		//waterCont();
+		waterCont();
 		
 		//diffuse(1, u, uOld, visc, dt);
 		//diffuse(2, v, vOld, visc, dt);
@@ -280,9 +280,12 @@ public class FluidSolver {
 		//addSource(d, dOld);
 		//debugLine("after sourceAdd");
 		// add moving vel Source
-		// addSource(d,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,1f));
+		//addSource(d,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,1f));
+		addSource(d,Field.smlBoxField(ssx, ssy, 0.08f));
 		
-		if(step>5)addSource(d,Field.pointsField(ssx,ssy,0.915f));
+		//if(step>5)addSource(d,Field.pointsField(ssx,ssy,0.915f));
+		
+		
 		//swapD();
 		//debugLine("after swap");
 		//copy(d,dOld); 
@@ -291,7 +294,6 @@ public class FluidSolver {
 		
 		swapD();
 		//debugLine("after swap");
-		
 		//advect(0,d,dOld,u,v);
 		advect(4,d,dOld,u,v);
 		//debugLine("after advection");
@@ -388,16 +390,12 @@ public class FluidSolver {
 		}
 		
 		
-		
-		
 		if (intergrationMethod==3){
 		//**********************************************************************************
 		// McCormack
 			float phi_n_x, 		phi_n_y;
 			float phi_n_hat_x, 	phi_n_hat_y;
 			float phi_n1_hat_x,	phi_n1_hat_y;
-			
-			
 			
 			for (int i=1; i<=ssx; i++){
 				for (int j=1; j<=ssy; j++){
@@ -471,7 +469,7 @@ public class FluidSolver {
 			}
 		}
 		setBounds(b,a);
-		setBoundsObst(b,a);
+		if(collision)setBoundsObst(b,a);
 	}
 
 
@@ -526,8 +524,8 @@ public class FluidSolver {
 		}
 		setBounds(0, div);
 		setBounds(0, q);
-		setBoundsObst(0, div);
-		setBoundsObst(0, q);
+		if(collision)setBoundsObst(0, div);
+		if(collision)setBoundsObst(0, q);
 				
 		//gauss seidel solve for q (i&j without boarders 0&ssxy+1)	
 		for ( k=0 ; k<20 ; k++ ) {   
@@ -558,7 +556,7 @@ public class FluidSolver {
 					} 
 			} 
 		setBounds(0, q); 
-		setBoundsObst(0, q);
+		if(collision)setBoundsObst(0, q);
 		}
 		
 		// Subtract (nabla)q from u and v (makes vel divergence free)
@@ -590,8 +588,8 @@ public class FluidSolver {
 		}
 		setBounds(1, u);
 		setBounds(2, v);
-		setBoundsObst(1, u);
-		setBoundsObst(2, v);
+		if(collision)setBoundsObst(1, u);
+		if(collision)setBoundsObst(2, v);
 		
 	} 
 	
@@ -657,10 +655,11 @@ public class FluidSolver {
 			}
 		}
 		
+		if(collision)setBoundsObst(1, vF_u);
+		if(collision)setBoundsObst(2, vF_v);
 		setBounds(1, vF_u);
 		setBounds(2, vF_v);
-		setBoundsObst(1, vF_u);
-		setBoundsObst(2, vF_v);
+		
 		
 	}
 	
@@ -685,7 +684,7 @@ public class FluidSolver {
 			}
 		}
 		setBounds(2,f);
-		setBoundsObst(2,f);
+		if(collision)setBoundsObst(2,f);
 	}
 	
 	
@@ -762,9 +761,9 @@ public class FluidSolver {
 		setBounds(4, qv);
 		setBounds(5, qc);
 		setBounds(3, pt);
-		setBoundsObst(4, qv);
-		setBoundsObst(5, qc);
-		setBoundsObst(3, pt);
+		if(collision)setBoundsObst(4, qv);
+		if(collision)setBoundsObst(5, qc);
+		if(collision)setBoundsObst(3, pt);
 		
 	}
 	
@@ -830,6 +829,7 @@ public void setBounds (int b, float[][] f){
 				f[0][i]    = wind;   
 				f[1][i]    = wind; //not sure wheter in or out
 				f[ssx+1][i] = wind; 
+				f[ssx][i] = wind; 
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
 				f[i][0]   =  0; 
@@ -844,11 +844,14 @@ public void setBounds (int b, float[][] f){
 		if (b==2){
 			for (int i=1 ; i<=ssy ; i++ ) { 
 				f[0][i]   = 0; 
+				//if(i<(ssx/2-ssx/4) && i>(ssx/2+ssx/4))
 				//f[1][i]   = 0; //not sure wheter in or out
 			}
 			for (int i=1 ; i<=ssx ; i++ ) { 
 				f[i][0]     = 0; 
-				// f[i][1]     = 0; //out for cloud input
+				
+				//if(i<(ssx/2-ssx/4) && i>(ssx/2+ssx/4))
+				f[i][1]     = 0; //out for cloud input
 				f[i][ssy+1] = 0; 
 				 
 			}
@@ -862,8 +865,8 @@ public void setBounds (int b, float[][] f){
 			
 			for(int i= 0; i<ssx+2; i++){
 				f[i][0] = pt0;
-				if(i>50 && i<150){
-					f[i][0] = pt0+	5;//10-PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*5f; 
+				if(i>(ssx/2-ssx/4) && i<(ssx/2+ssx/4)){
+					f[i][2] = pt0+	PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*30f; 
 					f[i][1] = pt0+	5;
 				}
 				f[i][ssy+1] = 	(float) (absT[ssy+1] * Math.pow( (100/absP[ssy+1]) , 0.286 ) );  
@@ -888,7 +891,7 @@ public void setBounds (int b, float[][] f){
 				f[i][0] 	= 	qv0;
 				
 				//PerlinNoise.perlinNoise(i, 50000000+time*0.8f, 0.51f, 10f, 1f)*0.9f; 
-				if(i>50 && i<150)	f[i][0] =0.2f;//+= 	0.00041f;
+				if(i>(ssx/2-ssx/4) && i<(ssx/2+ssx/4))	f[i][0] =0.01f;//+= 	0.00041f;
 			}
 		}
 		// b=5 cloud water
@@ -937,20 +940,16 @@ public void setBoundsObst (int b, float[][] f){
 						f[i][j] = (float)(c_1+c_2+c_3+c_4)/f_count;
 				
 				}
-			
+				
+				
 				// b=1 u velocity
 				else if (b==1){
-					
-					if(solid[i+1][j] == 1)			f[i][j] = 0f;
-					if(solid[i-1][j] == 1)			f[i][j] = 0f;
-					if(solid[i][j]   == 1)			f[i][j] = 0f;
+					if(solid[i][j]   == 1){			f[i][j] = 0f; 	f[i+1][j] = 0f;}
 				}
 				
 				// b=2 v
 				else if (b==2){
-					if(solid[i][j+1] == 1)			f[i][j] = 0f;
-					if(solid[i][j-1] == 1)			f[i][j] = 0f;
-					if(solid[i][j]   == 1)			f[i][j] = 0f;
+					if(solid[i][j]   == 1){			f[i][j] = 0f; 	f[i][j+1] = 0f;}
 					
 				}
 				

@@ -25,6 +25,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	static float scaleOut,dt, fps;
 	static long time;
 	
+	static int yMinSize=350; 
+	static int xMinSize=350; 
 	JFrame frame;
 	//Menu Stuff
 	JMenuItem menu_reset;
@@ -36,6 +38,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	JMenuItem menu_cloud;
 	JMenuItem menu_dens;
 	JMenuItem menu_vel;
+	JMenuItem menu_vapor;
 	JMenuItem paintVel,paintVapor;
 	static JLabel lblDebugvalue1;
 	static JLabel lblDebugvalue2;
@@ -51,7 +54,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	JButton btnPause = new JButton();
 	JButton btnStop = new JButton();
 	
-	static boolean dispVec,dispVal,dispTemp,dispSteps,mVapor,mVel,dispDebug, dispSettings, play, stop, writeImg, writeTxt;
+	static boolean dispVec,dispVal,dispTemp,dispSteps,dispVapor,mVapor,mVel,dispDebug, dispSettings, play, stop, writeImg, writeTxt;
 	
 	/** Display mode: 0= clouds; 1= temperature; 2= velocity; 3=	density*/
 	public static int dispMain; 	
@@ -62,8 +65,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	
 	static int mx, my, mxOld, myOld;
 
-	
-	
+
 	
 	// MAIN METHOD
 	public static void main(String[] args) {
@@ -104,26 +106,32 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	}
 	public static void init(){
 
-		dispMain = 3;
+		dispMain = 0;
 		
 		mx=my=myOld=mxOld=0;
 		
 		ssy = 200;
-		ssx = 150;
+		ssx = 200;
 		scaleOut = 2;
 		
 		sx = (int)scaleOut*ssx;
 		sy = (int)scaleOut*ssy;
 		//setup FluidSolver size
-		fs.setup(ssx, ssy, 1.0F, scaleOut);
+		fs.setup(ssx, ssy, 2.0F, scaleOut);
 		fp = new FluidPanel(fs, scaleOut);
-		fp.setBounds(5, 26, sx, sy);
+		
+		//center fluid panel
+		int x=5;
+		int y=26;
+		if(sx< xMinSize) x=(int)((xMinSize-sx)/2);
+		if(sy< xMinSize) y=(int)((yMinSize-sy)/2);
+		fp.setBounds(x, y, sx, sy);
 		
 		//setup Output
 		pixelField = new float[sx][sy];
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
-		dispVec=mVel=dispSteps=stop=true;
+		dispVec=mVel=dispSteps=dispVapor=stop=true;
 		dispVal=mVapor=dispTemp=dispDebug=dispVec=dispSettings=play= writeImg= writeTxt=false;
 		
 		time = System.currentTimeMillis();
@@ -132,9 +140,12 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	
 	// Constructor
 	public FluidViewer(){
+		int lsx= Math.max(xMinSize,sx);
+		int lsy= Math.max(yMinSize,sy);
+		
 		frame = new JFrame("Cloud Simulation");
 		frame.setLocation(100,100);
-		frame.setSize(sx+180,sy+190); 
+		frame.setSize(lsx+180,lsy+190); 
 		frame.getContentPane().setLayout(null);
 		frame.setResizable(false);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -149,20 +160,20 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		
 		JPanel bottomPanel = new JPanel();
 		bottomPanel.setBackground(Color.DARK_GRAY);
-		bottomPanel.setBounds(5, sy+31, sx, 125);
+		bottomPanel.setBounds(5, lsy+31, lsx, 125);
 		bottomPanel.setLayout(null);
 		
 		frame.getContentPane().add(bottomPanel);
 		
 		
-		btnPlay.setBounds((int)(sx/2)-56, 5, 34, 34);
+		btnPlay.setBounds((int)(lsx/2)-56, 5, 34, 34);
 		btnPlay.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/play.png")));
 		btnPlay.setBorderPainted(false);
 		btnPlay.addActionListener(this);
 		btnPlay.addMouseListener(this);
 		bottomPanel.add(btnPlay);
 		
-		btnPause.setBounds((int)(sx/2)-17, 5, 34, 34);
+		btnPause.setBounds((int)(lsx/2)-17, 5, 34, 34);
 		btnPause.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/pause.png")));
 		btnPause.setBorderPainted(false);
 		btnPause.addActionListener(this);
@@ -170,7 +181,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		bottomPanel.add(btnPause);
 		
 		btnStop.setIcon(new ImageIcon(getClass().getClassLoader().getResource("img/stop.png")));
-		btnStop.setBounds((int)(sx/2)+22, 5, 34, 34);
+		btnStop.setBounds((int)(lsx/2)+22, 5, 34, 34);
 		btnStop.setBorderPainted(false);
 		btnStop.addActionListener(this);
 		btnStop.addMouseListener(this);
@@ -220,6 +231,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	    menu_close = new JMenuItem("Close");
 	    menu_close.addActionListener(this);
 	    
+	    menu_vapor = new JMenuItem("Vapor");
+	    menu_vapor.addActionListener(this);
 	    menu_debug = new JMenuItem("Debug Values");
 	    menu_debug.addActionListener(this);
 	    menu_vectors = new JMenuItem("Vectors");
@@ -253,6 +266,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	    display.add(menu_temp);
 	    display.add(menu_dens);
 	    display.addSeparator();
+	    
+	    
+	    display.add(menu_vapor);
 	    display.add(menu_vectors); 
 	   	display.add(menu_debug);
 	    display.add(menu_stepcount);
@@ -266,7 +282,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
        
        settingsPanel = new JPanel();
 	   settingsPanel.setBackground(Color.DARK_GRAY);
-	   settingsPanel.setBounds(sx+10, 26, 160, sy);
+	   settingsPanel.setBounds(lsx+10, 26, 160, lsy);
 	        frame.getContentPane().add(settingsPanel);
 	        GridBagLayout gbl_settingsPanel = new GridBagLayout();
 	        gbl_settingsPanel.columnWidths = new int[] {60, 0};
@@ -515,7 +531,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 			
 			
 			JPanel debugValues = new JPanel();
-			debugValues.setBounds(sx+10, sy+31, 160, 125);
+			debugValues.setBounds(lsx+10, lsy+31, 160, 125);
 			frame.getContentPane().add(debugValues);
 			debugValues.setBackground(Color.DARK_GRAY);
 			GridBagLayout gbl_debugValues = new GridBagLayout();
@@ -703,6 +719,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
           
 		}
 		
+		else if (object.getSource() == menu_vapor){
+	    	   dispVapor=!dispVapor; 
+			}
 		else if (object.getSource() == menu_vectors){
     	   dispVec=!dispVec; 
 		}

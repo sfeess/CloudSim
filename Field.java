@@ -124,9 +124,13 @@ public class Field {
 		// Feld füllen
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
-
+				/*
 				if(i>(x/2-x/20) && i<(x/2+x/20) && j>(y*1/6-y/20) && j<(y*1/6+y/20)){
-				field[i][j] = v;}
+					field[i][j] = v;}
+				else {field[i][j] =0F;}
+				*/
+				if(i>(x/2-x/20) && i<(x/2+x/20) && j>(2) && j<(y/26)){
+					field[i][j] = v;}
 				else {field[i][j] =0F;}
 			
 			}
@@ -272,12 +276,12 @@ public class Field {
 	}
 	
 	
-	public static int[][] imgFieldSolid(int x, int y){
+	public static int[][] imgFieldSolid(int x, int y, String filename){
 		BufferedImage img = null;
 		
 		// Bild einlesen
 		try {
-			img = ImageIO.read(new File("cdot.bmp"));
+			img = ImageIO.read(new File(filename));
 		} catch (IOException e) {
 			System.out.println("fehler");
 			e.printStackTrace();

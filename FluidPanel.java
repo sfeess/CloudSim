@@ -76,10 +76,15 @@ public class FluidPanel extends JPanel{
 				// Cloud Out
 				//*********************************************************
 				if(FluidViewer.dispMain==0){	
-					c_qc =(int)((500*out_1[i][f.sy-1-j])*255);
+					c_qc =(int)((200*out_1[i][f.sy-1-j])*255);
 					c_qc = c_qc<0 ? 0:c_qc; 
-					c_qv =(int)(20f*(out_2[i][f.sy-1-j])*255);
-					c_qv = c_qv<0 ? 0:c_qv; 
+					
+					if(FluidViewer.dispVapor){
+						c_qv =(int)(20f*(out_2[i][f.sy-1-j])*255);
+						c_qv = c_qv<0 ? 0:c_qv; 
+					}
+					else	c_qv=0;
+					
 					
 					d[0] = Math.min(255, d[0]+c_qc);
 					d[1] = Math.min(255, d[1]+c_qc+c_qv);
@@ -101,9 +106,13 @@ public class FluidPanel extends JPanel{
 				//*********************************************************
 				if(FluidViewer.dispMain==2){
 					c_u =(int)(1f*(out_u[i][f.sy-1-j])*255);
+					c_u = Math.abs(c_u);
 					c_u = c_u<0 ? 0:c_u; 
+					
 					c_v =(int)(1f*(out_v[i][f.sy-1-j])*255);
+					c_v = Math.abs(c_v);
 					c_v = c_v<0 ? 0:c_v; 
+					
 					
 					d[0] = Math.min(255, c_u);
 					d[1] = Math.min(255, c_v);
@@ -158,7 +167,9 @@ public class FluidPanel extends JPanel{
 		
 		if(FluidViewer.dispSteps){
 		// Display frame number
-		onimg.setColor(Color.magenta);
+		onimg.setColor(Color.darkGray);
+		onimg.drawString("Frame:"+f.step,9,16);
+		onimg.setColor(Color.white);
 		onimg.drawString("Frame:"+f.step,8,15);
 		}
 		// image on Panel
