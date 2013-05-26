@@ -65,13 +65,14 @@ public class FluidPanel extends JPanel{
 
 		WritableRaster raster= img.getRaster();
 		int[] d = new int[3];
-		
+		//int max=0;
 		for(int i=0; i<f.sx; i++){
 			for(int j=0; j<f.sy; j++){
 			
 				// Background Color
 				//*********************************************************
 			 	d[0]=51; d[1]=102; d[2]=153; 
+			 	//d[0]=0; d[1]=0; d[2]=0; 
 				
 				// Cloud Out
 				//*********************************************************
@@ -85,17 +86,31 @@ public class FluidPanel extends JPanel{
 					}
 					else	c_qv=0;
 					
+					//if(c_qc>max){
+					//	max=c_qc;
+					//	System.out.println("___________________________________"+max);
+					//}
 					
-					d[0] = Math.min(255, d[0]+c_qc);
-					d[1] = Math.min(255, d[1]+c_qc+c_qv);
-					d[2] = Math.min(255, d[2]+c_qc);
+					d[0]=c_qc; //cloudColor(c_qc).getRed();
+					d[1]=c_qc; //cloudColor(c_qc).getGreen();
+					d[2]=c_qc; //cloudColor(c_qc).getBlue();
+					
+					d[0] = Math.min(255, d[0]);
+					d[1] = Math.min(255, d[1]+c_qv*2);
+					d[2] = Math.min(255, d[2]);
 				}
 				
 				// Temperature Out
 				//*********************************************************
 				if(FluidViewer.dispMain==1){
 					c_pt = (int) out_pt[i][f.sy-1-j];
-					c_pt = c_pt>254 ? 255:c_pt; 
+					
+					//if(c_pt>max){
+						//max=c_pt;
+						//System.out.println("___________________________________"+max);
+						//}
+					
+					//c_pt = c_pt>254 ? 255:c_pt; 
 					
 					d[0]=heatColor(c_pt).getRed();
 					d[1]=heatColor(c_pt).getGreen();
@@ -225,35 +240,37 @@ public class FluidPanel extends JPanel{
 		Color c3 = new Color(255, 255, 0);
 		Color c4 = new Color(180, 0, 50);
 		Color c5 = new Color(255, 0, 255);
+		c5 = new Color(255, 255, 255);
 		
-		float  p[] = {200f,250f,300f,350f,450};
-		
+		float  p[] = {290f,298f,305f,315f,450f};
+		//System.out.println(temp);
+		if (temp<p[0])temp=p[0]+1;
 		if(temp<p[1]){
 			c1 =  new Color(
-							(int) (c1.getRed()    +  ( ((temp-p[0])/(p[1]-p[0]))  * (c2.getRed()  -c1.getRed() ) )), 
-							(int) (c1.getGreen()  +  ( ((temp-p[0])/(p[1]-p[0]))  * (c2.getGreen()-c1.getGreen() ) )), 
-							(int) (c1.getBlue()   +  ( ((temp-p[0])/(p[1]-p[0]))  * (c2.getBlue() -c1.getBlue() ) ))
+							(int) ((float)c1.getRed()    +  ( ((temp-p[0])/(p[1]-p[0]))  * ((float)c2.getRed()  -(float)c1.getRed() ) )), 
+							(int) ((float)c1.getGreen()  +  ( ((temp-p[0])/(p[1]-p[0]))  * ((float)c2.getGreen()-(float)c1.getGreen() ) )), 
+							(int) ((float)c1.getBlue()   +  ( ((temp-p[0])/(p[1]-p[0]))  * ((float)c2.getBlue() -(float)c1.getBlue() ) ))
 							); 
 		}
 		else if(temp<p[2]){
 			c1 =  new Color(
-							(int) (c2.getRed()    +  ( ((temp-p[1])/(p[2]-p[1]))  * (c3.getRed()  -c2.getRed() ) )), 
-							(int) (c2.getGreen()  +  ( ((temp-p[1])/(p[2]-p[1]))  * (c3.getGreen()-c2.getGreen() ) )), 
-							(int) (c2.getBlue()   +  ( ((temp-p[1])/(p[2]-p[1]))  * (c3.getBlue() -c2.getBlue() ) ))
+							(int) ((float)c2.getRed()    +  ( ((temp-p[1])/(p[2]-p[1]))  * ((float)c3.getRed()  -(float)c2.getRed() ) )), 
+							(int) ((float)c2.getGreen()  +  ( ((temp-p[1])/(p[2]-p[1]))  * ((float)c3.getGreen()-(float)c2.getGreen() ) )), 
+							(int) ((float)c2.getBlue()   +  ( ((temp-p[1])/(p[2]-p[1]))  * ((float)c3.getBlue() -(float)c2.getBlue() ) ))
 							); 
 		}
 		else if(temp<p[3]){
 			c1 =  new Color(
-							(int) (c3.getRed()    +  ( ((temp-p[2])/(p[3]-p[2]))  * (c4.getRed()-c3.getRed() ) )),
-							(int) (c3.getGreen()  +  ( ((temp-p[2])/(p[3]-p[2]))  * (c4.getGreen()-c3.getGreen() ) )),
-							(int) (c3.getBlue()   +  ( ((temp-p[2])/(p[3]-p[2]))  * (c4.getBlue() -c3.getBlue() ) ))
+							(int) ((float)c3.getRed()    +  ( ((temp-p[2])/(p[3]-p[2]))  * ((float)c4.getRed()-(float)c3.getRed() ) )),
+							(int) ((float)c3.getGreen()  +  ( ((temp-p[2])/(p[3]-p[2]))  * ((float)c4.getGreen()-(float)c3.getGreen() ) )),
+							(int) ((float)c3.getBlue()   +  ( ((temp-p[2])/(p[3]-p[2]))  * ((float)c4.getBlue() -(float)c3.getBlue() ) ))
 							); 
 		}
 		else if(temp<p[4]){
 			c1 =  new Color(
-							(int) (c4.getRed()    +  ( ((temp-p[3])/(p[4]-p[3]))  * (c5.getRed()  -c4.getRed() ) )), 
-							(int) (c4.getGreen()  +  ( ((temp-p[3])/(p[4]-p[3]))  * (c5.getGreen()-c4.getGreen() ) )), 
-							(int) (c4.getBlue()   +  ( ((temp-p[3])/(p[4]-p[3]))  * (c5.getBlue() -c4.getBlue() ) ))
+							(int) ((float)c4.getRed()    +  ( ((temp-p[3])/(p[4]-p[3]))  * ((float)c5.getRed()  -(float)c4.getRed() ) )), 
+							(int) ((float)c4.getGreen()  +  ( ((temp-p[3])/(p[4]-p[3]))  * ((float)c5.getGreen()-(float)c4.getGreen() ) )), 
+							(int) ((float)c4.getBlue()   +  ( ((temp-p[3])/(p[4]-p[3]))  * ((float)c5.getBlue() -(float)c4.getBlue() ) ))
 							); 
 		}
 		
@@ -263,7 +280,42 @@ public class FluidPanel extends JPanel{
 		
 	}
 	
-	
+public static Color cloudColor(float dens){
+		
+		Color res;
+		Color c1 = new Color(51, 102, 153);
+		Color c2 = new Color(255, 255, 255);
+		Color c3 = new Color(129, 154, 184);
+		
+		
+		//Color c1 = new Color(0, 0, 0);
+		//Color c2 = new Color(255, 0, 0);
+		//Color c3 = new Color(0, 255, 0);
+		
+		
+		float  p[] = {0f,180f,250f};
+		//System.out.println(temp);
+		if (dens<p[0])dens=p[0]+1;
+		if(dens<p[1]){
+			res =  new Color(
+							(int) ((float)c1.getRed()    +  ( ((dens-p[0])/(p[1]-p[0]))  * ((float)c2.getRed()  -(float)c1.getRed() ) )), 
+							(int) ((float)c1.getGreen()  +  ( ((dens-p[0])/(p[1]-p[0]))  * ((float)c2.getGreen()-(float)c1.getGreen() ) )), 
+							(int) ((float)c1.getBlue()   +  ( ((dens-p[0])/(p[1]-p[0]))  * ((float)c2.getBlue() -(float)c1.getBlue() ) ))
+							); 
+		}
+		else if(dens<p[2]){
+			res =  new Color(
+							(int) ((float)c2.getRed()    +  ( ((dens-p[1])/(p[2]-p[1]))  * ((float)c3.getRed()  -(float)c2.getRed() ) )), 
+							(int) ((float)c2.getGreen()  +  ( ((dens-p[1])/(p[2]-p[1]))  * ((float)c3.getGreen()-(float)c2.getGreen() ) )), 
+							(int) ((float)c2.getBlue()   +  ( ((dens-p[1])/(p[2]-p[1]))  * ((float)c3.getBlue() -(float)c2.getBlue() ) ))
+							); 
+		}
+				
+		else res = c3;
+		
+		return res;
+		
+	}
 	
 
 }

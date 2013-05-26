@@ -201,16 +201,18 @@ public class Interpolation {
 	
 	
 	public static float per_BiLin(float xpos, float ypos, float[][] f){
-		x1 = (int) xpos;
+		x1 = (int)Math.floor(xpos);
 		x2 = x1+1;
-		y1 = (int) ypos;
+		y1 = (int)Math.floor(ypos);
 		y2 = y1+1;
 		
 		// Periodic X-Boarder
-		if(x1<1){					x1 = ssx + x1;	}
-		if(x2<1){					x2 = ssx + x2;	}
-		if(x1>ssx){					x1 = (x1-ssx);	}			
-		if(x2>ssx){					x2 = (x2-ssx);	}
+		if(x1<1){					x1 = ssx+1 + x1;	
+			if(x2<1)				x2 = ssx+1 + x2;	
+		}
+		else if(x2>ssx){			x2 = (x2-ssx);	
+			if(x1>ssx)				x1 = (x1-ssx);	
+		}		
 		
 		// Y-Boarder
 		if(y1<0){					y1 = 0;	}

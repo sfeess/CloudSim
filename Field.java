@@ -124,15 +124,15 @@ public class Field {
 		// Feld füllen
 		for(int i=0; i<x+2; i++){
 			for(int j=0; j<y+2; j++){
-				/*
+				
 				if(i>(x/2-x/20) && i<(x/2+x/20) && j>(y*1/6-y/20) && j<(y*1/6+y/20)){
 					field[i][j] = v;}
 				else {field[i][j] =0F;}
-				*/
+				/*
 				if(i>(x/2-x/20) && i<(x/2+x/20) && j>(2) && j<(y/26)){
 					field[i][j] = v;}
 				else {field[i][j] =0F;}
-			
+			*/
 			}
 		}
 		return field;	

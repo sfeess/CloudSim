@@ -2,7 +2,7 @@
 
 public class FluidSolver {
 	
-	float qc_max=0;
+	//float qc_max=0;
 	int intergrationMethod = 1;
 	int interpolationMethod = 0;
 	boolean collision = false;
@@ -26,6 +26,7 @@ public class FluidSolver {
 	float diff; 				// Viscosity 
 	float visc; 				// Diffusionrate
 	float wind;					// horizontal wind
+	float heatSrc;					// input temperature
 		
 	
 	// Cloud variables
@@ -104,7 +105,6 @@ public class FluidSolver {
 		
 		// Initialize Fluid 
 		//************************************************************
-		wind = 0.1f;
 		diff = 0.0000f;
 		visc = 0.000000000f;
 		
@@ -119,13 +119,16 @@ public class FluidSolver {
 		
 		
 		// user defined
-		maxAlt = 	6000;		// altitude in meter on top of sim grid
+		maxAlt = 	4000;		// altitude in meter on top of sim grid
 		tlr = 		0.9f; 		// Kelvin per 100 meter between 0.55 and 0.99
 			tlr /= 	100; 		// Kelvin per 1 meter
 		t0 = 		295;		// temp on ground in Kelvin
 		hum = 		0.6f;		// humidty
 		buoyancy =  0.8f;
 		vort = 		0.2f;
+		wind = 		0.1f;
+		heatSrc = 	20f;
+		
 		
 		reset();
 	}	
@@ -144,10 +147,10 @@ public class FluidSolver {
 			}
 		}
 		
-		// v = Field.boxField(ssx,ssy,-1f);
-		//u = Field.lineFieldLeft(ssx,ssy,1f);
+		// v =   Field.boxField(ssx,ssy,-1f);
+		// u =   Field.lineFieldLeft(ssx,ssy,1f);
 		// d = Field.boxField(ssx,ssy,1f);
-		if(collision)solid = Field.imgFieldSolid(ssx,ssy,"berg.bmp");
+		//if(collision)solid = Field.imgFieldSolid(ssx,ssy,"berg.bmp");
 		
 		// Initialize absolute Temp lookup
 		//************************************************************
@@ -215,22 +218,24 @@ public class FluidSolver {
 	 */
 	public void solveVel(){
 		
+		
 		//addSource(qv,qvOld);
 		
 		//addSource(u,uOld);
 		//addSource(v,vOld);
 		
 		//add moving vel Source
-		//addSource(v,Field.smlBoxField(ssx,ssy,0.3f));
+		//addSource(qv,Field.smlBoxField(ssx,ssy,0.3f));
 		//addSource(u, Field.smlBoxField3(ssx,ssy,0.2f));
 		//if(step<100)addSource(u, Field.lineFieldLeft(ssx,ssy,0.02f));
-		//addSource(v,Field.smlBoxField(ssx,ssy,-Math.min(0,(float) Math.sin(step*0.1) ) ) );
+		//addSource(v,Field.smlBoxField(ssx,ssy,-Math.min(0,(float) Math.cos(step*0.2) ) ) );
+		//addSource(u,Field.smlBoxField(ssx,ssy,(float)Math.sin(step*0.9f)*0.2f));
 		
 		vorticityConf(uOld, vOld, vort);
 		addSource(u,uOld);
 		addSource(v,vOld);
 		
-		project(u,v,uOld,vOld);
+		if(step<30)project(u,v,uOld,vOld);
 		
 		buoyancy(vOld, buoyancy);
 		addSource(v,vOld);
@@ -241,15 +246,17 @@ public class FluidSolver {
 		advect(5, qc, qcOld, u, v);
 		advect(3, pt, ptOld, u, v);
 		
+		
 		swapU(); swapV();
 		//copy(u,uOld); copy(v,vOld);	
 		advect(1, u, uOld, uOld, vOld);
 		advect(2, v, vOld, uOld, vOld);
-		
+			
 		waterCont();
 		
 		//diffuse(1, u, uOld, visc, dt);
 		//diffuse(2, v, vOld, visc, dt);
+		
 		
 		project(u,v,uOld,vOld);
 		
@@ -281,7 +288,7 @@ public class FluidSolver {
 		//debugLine("after sourceAdd");
 		// add moving vel Source
 		//addSource(d,Field.noiseEmitField(ssx,ssy,0.51f,10f,time,1f));
-		addSource(d,Field.smlBoxField(ssx, ssy, 0.08f));
+		if(step>15)addSource(d,Field.smlBoxField(ssx, ssy, 0.08f));
 		
 		//if(step>5)addSource(d,Field.pointsField(ssx,ssy,0.915f));
 		
@@ -428,19 +435,9 @@ public class FluidSolver {
 					float max = Math.max(Math.max(Math.max(l_1, l_2),l_3),l_4);
 					float min = Math.min(Math.min(Math.min(l_1, l_2),l_3),l_4);
 					
-					
-					
 					// interpolate the value of old field
-					if(b==4) {
-						a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld, periodic);
-						a[i][j] = Math.min( Math.max(a[i][j], min), max);
-					}
-					else{
-						a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld, periodic);
-						a[i][j] = Math.min( Math.max(a[i][j], min), max);
-					}
-					
-					//if(solid[i][j]==1)setBounds(b,aOld, i,j);
+					a[i][j] = (float)interpolate(x-offset_x, y-offset_y, aOld, periodic);
+					a[i][j] = Math.min( Math.max(a[i][j], min), max);
 				}
 			}
 		}
@@ -484,7 +481,7 @@ public class FluidSolver {
 	 */
 	public void project(float[][] u, float[][] v,float[][] q, float[][] div){
 		
-		int i, j, k; 
+		int i, j; 
 		float h = 1.0f;  
 		
 		//calculate divergence field
@@ -526,38 +523,39 @@ public class FluidSolver {
 		setBounds(0, q);
 		if(collision)setBoundsObst(0, div);
 		if(collision)setBoundsObst(0, q);
-				
-		//gauss seidel solve for q (i&j without boarders 0&ssxy+1)	
-		for ( k=0 ; k<20 ; k++ ) {   
+		
+		
+		//SOR - gauss seidel 
+		//solve for q (i&j without boarders 0&ssxy+1)	
+		float temp = 0f;
+		float w = 1.9f;
+		float error = 1.5f;
+		int l = 0;
+		while(error>0.00001f) {
+			l++;
 			for ( i=1 ; i<=ssx ; i++ ) {    
 				for ( j=1 ; j<=ssy ; j++ ) { 
-					
-					//cell numbering
-					//***********|1|
-					//******* |4| 0 |2|
-					//***********|3|
-					// if cell is solid use central pressure value
 					
 					float c_1 = solid[i][j-1] == 1 ? q[i][j] : q[i][j-1];
 					float c_2 = solid[i+1][j] == 1 ? q[i][j] : q[i+1][j];
 					float c_3 = solid[i][j+1] == 1 ? q[i][j] : q[i][j+1];
 					float c_4 = solid[i-1][j] == 1 ? q[i][j] : q[i-1][j];
 					
-					//float c_1 = q[i][j-1];
-					//float c_2 = q[i+1][j];
-					//float c_3 = q[i][j+1];
-					//float c_4 = q[i-1][j];
+					//temp= 	(-div[i][j]	+ c_4 + c_2	+ c_1 + c_3  )/4;
+					temp = (1-w)*q[i][j] +w*(-div[i][j]	+ c_4 + c_2	+ c_1 + c_3  )/4;
+					error = Math.abs(q[i][j]-temp);
+					q[i][j]=temp;
 					
-					q[i][j] = 	(-div[i][j]	+ c_4 + c_2	+ c_1 + c_3  )/4;
 					
-					//q[i][j] = 	(-(div[i][j])
-					//				+q[i-1][j]+q[i+1][j]
-					//				+q[i][j-1]+q[i][j+1])/4;
 					} 
 			} 
+		
+		}
 		setBounds(0, q); 
 		if(collision)setBoundsObst(0, q);
-		}
+		System.out.println(l+" Iterationen");
+		
+		
 		
 		// Subtract (nabla)q from u and v (makes vel divergence free)
 		// u-(nabla)qx = u-(q right - q left)/2h
@@ -730,10 +728,10 @@ public class FluidSolver {
 				qc[i][j] = qc[i][j] - d_qv;
 				
 				
-				if(j>3 && qc[i][j]>qc_max){	
-					qc_max=qc[i][j];
-					System.out.println(1/qc_max);
-				}
+				//if(j>3 && qc[i][j]>qc_max){	
+				//	qc_max=qc[i][j];
+				//	System.out.println(1/qc_max);
+				//}
 				
 				//if(i==30 && j ==4)System.out.println("qs="+qs+" dqv="+d_qv+" qc="+qc[i][j]+" qv="+qv[i][j]);
 				
@@ -866,8 +864,8 @@ public void setBounds (int b, float[][] f){
 			for(int i= 0; i<ssx+2; i++){
 				f[i][0] = pt0;
 				if(i>(ssx/2-ssx/4) && i<(ssx/2+ssx/4)){
-					f[i][2] = pt0+	PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*30f; 
-					f[i][1] = pt0+	5;
+					f[i][2] = pt0+	PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*heatSrc; 
+					f[i][1] = pt0+	0;
 				}
 				f[i][ssy+1] = 	(float) (absT[ssy+1] * Math.pow( (100/absP[ssy+1]) , 0.286 ) );  
 			}
@@ -892,6 +890,13 @@ public void setBounds (int b, float[][] f){
 				
 				//PerlinNoise.perlinNoise(i, 50000000+time*0.8f, 0.51f, 10f, 1f)*0.9f; 
 				if(i>(ssx/2-ssx/4) && i<(ssx/2+ssx/4))	f[i][0] =0.01f;//+= 	0.00041f;
+			}
+			for(int j= 0; j<ssy; j++){
+				f[ssx+1][j]= f[0][j]=	(f[ssx][j]+f[1][j])/2;
+				//f[ssx][j]=10;
+				//f[ssx+1][j]=f[1][j];
+				//f[0][j]=f[ssx][j];
+				//f[1][j] = 	(float) (hum	*(  (380/(absP[j]*1000)  ) * Math.exp( (17.67*(absT[j]-273.15)) / (absT[j]-273.15+243.5)))) ;
 			}
 		}
 		// b=5 cloud water
@@ -950,7 +955,6 @@ public void setBoundsObst (int b, float[][] f){
 				// b=2 v
 				else if (b==2){
 					if(solid[i][j]   == 1){			f[i][j] = 0f; 	f[i][j+1] = 0f;}
-					
 				}
 				
 				// b=3 potential temp

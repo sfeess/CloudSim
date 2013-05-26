@@ -16,9 +16,9 @@ public class WriteData {
 
 	
 	public static void valuesOut(int x, int y){
-		new File("Cloud_Out").mkdirs();
+		new File("values").mkdirs();
 		
-		File file = new File("Cloud_Out\\FluidValues_x"+x+"_y"+y+".txt");
+		File file = new File("values\\FluidValues_x"+x+"_y"+y+".txt");
 		
 	     try {
 	       FileWriter writer = new FileWriter(file ,true);
@@ -44,6 +44,7 @@ public class WriteData {
 	    } 
 	    catch (IOException e) {
 	      e.printStackTrace();
+	      System.out.println("Error");
 	    }
 	 }
 	

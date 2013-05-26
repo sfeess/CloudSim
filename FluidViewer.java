@@ -25,7 +25,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	static float scaleOut,dt, fps;
 	static long time;
 	
-	static int yMinSize=350; 
+	static int yMinSize=400; 
 	static int xMinSize=350; 
 	JFrame frame;
 	//Menu Stuff
@@ -39,7 +39,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	JMenuItem menu_dens;
 	JMenuItem menu_vel;
 	JMenuItem menu_vapor;
-	JMenuItem paintVel,paintVapor;
+	JMenuItem paintVel,paintVapor, paintSolid;
 	static JLabel lblDebugvalue1;
 	static JLabel lblDebugvalue2;
 	static JLabel lblDebugvalue3;
@@ -54,7 +54,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	JButton btnPause = new JButton();
 	JButton btnStop = new JButton();
 	
-	static boolean dispVec,dispVal,dispTemp,dispSteps,dispVapor,mVapor,mVel,dispDebug, dispSettings, play, stop, writeImg, writeTxt;
+	static boolean dispVec,dispVal,dispTemp,dispSteps,dispVapor,mVapor,mVel,mSolid,dispDebug, dispSettings, play, stop, writeImg, writeTxt;
 	
 	/** Display mode: 0= clouds; 1= temperature; 2= velocity; 3=	density*/
 	public static int dispMain; 	
@@ -93,7 +93,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 				
 		// Output Data
 		if(writeImg)WriteData.imgOut();
-		if(writeTxt)WriteData.boxValuesOut(90,10,90,10);
+		//if(writeTxt)WriteData.boxValuesOut(90,10,90,10);
+		if(writeTxt)WriteData.valuesOut(10,10);
 		//if(writeTxt)WriteData.valuesOut();
 		
 		//Fps Display
@@ -131,8 +132,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		pixelField = new float[sx][sy];
 		img = new BufferedImage(sx, sy, BufferedImage.TYPE_INT_RGB);
 		onimg = img.createGraphics();
-		dispVec=mVel=dispSteps=dispVapor=stop=true;
-		dispVal=mVapor=dispTemp=dispDebug=dispVec=dispSettings=play= writeImg= writeTxt=false;
+		dispVec=dispSteps=dispVapor=stop=true;
+		dispVal=mVapor=dispTemp=dispDebug=dispVec=dispSettings=play= writeImg=mVel= writeTxt=mSolid=false;
 		
 		time = System.currentTimeMillis();
 	}
@@ -188,6 +189,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		bottomPanel.add(btnStop);
 		
 		cbox_WriteImg = new JCheckBox("Write Images");
+		cbox_WriteImg.setToolTipText("Simulation needs to be PAUSED to change this value");
 		cbox_WriteImg.setFont(new Font("Monospaced", Font.PLAIN, 11));
 		cbox_WriteImg.setForeground(Color.LIGHT_GRAY);
 		cbox_WriteImg.setBackground(Color.DARK_GRAY);
@@ -195,6 +197,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		bottomPanel.add(cbox_WriteImg);
 		
 		cbox_WriteTxt = new JCheckBox("Write Data Files");
+		cbox_WriteTxt.setEnabled(false);
+		cbox_WriteTxt.setToolTipText("Simulation needs to be PAUSED to change this value");
 		cbox_WriteTxt.setFont(new Font("Monospaced", Font.PLAIN, 11));
 		cbox_WriteTxt.setForeground(Color.LIGHT_GRAY);
 		cbox_WriteTxt.setBackground(Color.DARK_GRAY);
@@ -252,6 +256,8 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	    paintVel.addActionListener(this);
 	    paintVapor = new JMenuItem("paint Vapor");
 	    paintVapor.addActionListener(this);
+	    paintSolid = new JMenuItem("paint Solid");
+	    paintSolid.addActionListener(this);
 	    topPanel.setLayout(new GridLayout(0, 1, 0, 0));
 	    
 	    menuBar.add(file);
@@ -275,20 +281,22 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	    
 	    action.add(paintVel);
 	    action.add(paintVapor);
+	    action.add(paintSolid);
 	    topPanel.add(menuBar);
 	    frame.getContentPane().add(fp);
         
 	        
        
        settingsPanel = new JPanel();
+       settingsPanel.setToolTipText("Sets the speed of the wind on the sides");
 	   settingsPanel.setBackground(Color.DARK_GRAY);
 	   settingsPanel.setBounds(lsx+10, 26, 160, lsy);
 	        frame.getContentPane().add(settingsPanel);
 	        GridBagLayout gbl_settingsPanel = new GridBagLayout();
 	        gbl_settingsPanel.columnWidths = new int[] {60, 0};
-	        gbl_settingsPanel.rowHeights = new int[]{20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	        gbl_settingsPanel.rowHeights = new int[]{20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	        gbl_settingsPanel.columnWeights = new double[]{1.0, 1.0};
-	        gbl_settingsPanel.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+	        gbl_settingsPanel.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
 	        settingsPanel.setLayout(gbl_settingsPanel);
 	        
 	        JLabel lblInitialValuesrestart = new JLabel("Initial Values");
@@ -437,6 +445,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        settingsPanel.add(lblBuoyancy, gbc_lblBuoyancy);
 	        
 	        txtDt = new JTextField();
+	        txtDt.setToolTipText("time of one simulation step");
 	        txtDt.setForeground(Color.WHITE);
 	        txtDt.setBackground(Color.GRAY);
 	        txtDt.setText(String.valueOf(fs.dt));
@@ -460,6 +469,55 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        dtLabel.setFont(new Font("Monospaced", Font.PLAIN, 11));
 	        dtLabel.setForeground(Color.LIGHT_GRAY);
 	        
+	        txtWind = new JTextField();
+	        txtWind.setToolTipText("");
+	        txtWind.setBackground(Color.GRAY);
+	        txtWind.setForeground(Color.WHITE);
+	        txtWind.setText(String.valueOf(fs.wind));
+	        GridBagConstraints gbc_txtWind = new GridBagConstraints();
+	        gbc_txtWind.insets = new Insets(0, 5, 5, 5);
+	        gbc_txtWind.fill = GridBagConstraints.HORIZONTAL;
+	        gbc_txtWind.gridx = 0;
+	        gbc_txtWind.gridy = 8;
+	        settingsPanel.add(txtWind, gbc_txtWind);
+	        txtWind.setColumns(10);
+	        txtWind.addActionListener(this);
+	        
+	        JLabel lblWind = new JLabel("Wind");
+	        lblWind.setForeground(Color.LIGHT_GRAY);
+	        lblWind.setFont(new Font("Monospaced", Font.PLAIN, 11));
+	        GridBagConstraints gbc_lblWind = new GridBagConstraints();
+	        gbc_lblWind.anchor = GridBagConstraints.WEST;
+	        gbc_lblWind.insets = new Insets(0, 0, 5, 0);
+	        gbc_lblWind.gridx = 1;
+	        gbc_lblWind.gridy = 8;
+	        settingsPanel.add(lblWind, gbc_lblWind);
+	        
+	        txtHeat = new JTextField();
+	        txtHeat.setToolTipText("");
+	        txtHeat.setForeground(Color.WHITE);
+	        txtHeat.setBackground(Color.GRAY);
+	        txtHeat.setText(String.valueOf(fs.heatSrc));
+	        GridBagConstraints gbc_txtHeat = new GridBagConstraints();
+	        gbc_txtHeat.insets = new Insets(0, 5, 5, 5);
+	        gbc_txtHeat.fill = GridBagConstraints.HORIZONTAL;
+	        gbc_txtHeat.gridx = 0;
+	        gbc_txtHeat.gridy = 9;
+	        settingsPanel.add(txtHeat, gbc_txtHeat);
+	        txtHeat.setColumns(10);
+	        txtHeat.addActionListener(this);
+	        
+	        lblHeatSource = new JLabel("Heat Source");
+	        lblHeatSource.setToolTipText("sets the temperature of the heat noise field on the ground");
+	        lblHeatSource.setForeground(Color.LIGHT_GRAY);
+	        lblHeatSource.setFont(new Font("Monospaced", Font.PLAIN, 11));
+	        GridBagConstraints gbc_lblHeatSource = new GridBagConstraints();
+	        gbc_lblHeatSource.anchor = GridBagConstraints.WEST;
+	        gbc_lblHeatSource.insets = new Insets(0, 0, 5, 0);
+	        gbc_lblHeatSource.gridx = 1;
+	        gbc_lblHeatSource.gridy = 9;
+	        settingsPanel.add(lblHeatSource, gbc_lblHeatSource);
+	        
 	        lblSimulationDetail = new JLabel("Simulation Detail");
 	        lblSimulationDetail.setFont(new Font("Monospaced", Font.PLAIN, 11));
 	        lblSimulationDetail.setForeground(Color.WHITE);
@@ -468,7 +526,7 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        gbc_lblSimulationDetail.fill = GridBagConstraints.HORIZONTAL;
 	        gbc_lblSimulationDetail.insets = new Insets(15, 5, 5, 0);
 	        gbc_lblSimulationDetail.gridx = 0;
-	        gbc_lblSimulationDetail.gridy = 8;
+	        gbc_lblSimulationDetail.gridy = 10;
 	        settingsPanel.add(lblSimulationDetail, gbc_lblSimulationDetail);
 	        
 	       
@@ -481,13 +539,13 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        gbc_lblIntegration.insets = new Insets(0, 0, 5, 0);
 	        gbc_lblIntegration.anchor = GridBagConstraints.WEST;
 	        gbc_lblIntegration.gridx = 1;
-	        gbc_lblIntegration.gridy = 9;
+	        gbc_lblIntegration.gridy = 11;
 	        settingsPanel.add(lblIntegration, gbc_lblIntegration);
 	        
 	        String[] integr = {"Euler", "RungeKutta2", "McCormack"};
 	        comboBox_igr = new JComboBox<Object>(integr);
 	        comboBox_igr.setSelectedIndex(fs.intergrationMethod-1);
-	        comboBox_igr.setToolTipText("Integration Method");
+	        comboBox_igr.setToolTipText("changes the integration method");
 	        comboBox_igr.setFont(new Font("Monospaced", Font.PLAIN, 11));
 	        comboBox_igr.setBackground(Color.GRAY);
 	        comboBox_igr.setForeground(Color.WHITE);
@@ -495,16 +553,16 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        
 	        GridBagConstraints gbc_comboBox_igr = new GridBagConstraints();
 	        gbc_comboBox_igr.gridwidth = 2;
-	        gbc_comboBox_igr.insets = new Insets(0, 5, 5, 5);
+	        gbc_comboBox_igr.insets = new Insets(0, 5, 5, 0);
 	        gbc_comboBox_igr.fill = GridBagConstraints.HORIZONTAL;
 	        gbc_comboBox_igr.gridx = 0;
-	        gbc_comboBox_igr.gridy = 10;
+	        gbc_comboBox_igr.gridy = 12;
 	        settingsPanel.add(comboBox_igr, gbc_comboBox_igr);
 	        
 	        String[] interp = {"Linear", "Cubic"};
 	        comboBox_ipl = new JComboBox<Object>(interp);
 	        comboBox_ipl.setSelectedIndex(fs.interpolationMethod);
-	        comboBox_ipl.setToolTipText("Interpolation Method");
+	        comboBox_ipl.setToolTipText("changes the interpolation method");
 	        comboBox_ipl.setForeground(Color.WHITE);
 	        comboBox_ipl.setBackground(Color.GRAY);
 	        comboBox_ipl.setFont(new Font("Monospaced", Font.PLAIN, 11));
@@ -517,15 +575,15 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	        gbc_lblInterpolation.anchor = GridBagConstraints.WEST;
 	        gbc_lblInterpolation.insets = new Insets(0, 0, 5, 0);
 	        gbc_lblInterpolation.gridx = 1;
-	        gbc_lblInterpolation.gridy = 11;
+	        gbc_lblInterpolation.gridy = 13;
 	        settingsPanel.add(lblInterpolation, gbc_lblInterpolation);
 	        
 	        GridBagConstraints gbc_comboBox_ipl = new GridBagConstraints();
 	        gbc_comboBox_ipl.gridwidth = 2;
-	        gbc_comboBox_ipl.insets = new Insets(0, 5, 5, 5);
+	        gbc_comboBox_ipl.insets = new Insets(0, 5, 5, 0);
 	        gbc_comboBox_ipl.fill = GridBagConstraints.HORIZONTAL;
 	        gbc_comboBox_ipl.gridx = 0;
-	        gbc_comboBox_ipl.gridy = 12;
+	        gbc_comboBox_ipl.gridy = 14;
 	        settingsPanel.add(comboBox_ipl, gbc_comboBox_ipl);
 	        
 			
@@ -665,7 +723,14 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 			fs.maxAlt = textToFloat(txtAlt.getText(), 0,10000, fs.maxAlt,1);
 			txtAlt.setText(String.valueOf(fs.maxAlt));
 		}
-		
+		else if(object.getSource() == txtWind){
+			fs.wind = textToFloat(txtWind.getText(), -10,10, fs.wind,1);
+			txtWind.setText(String.valueOf(fs.wind));
+		}
+		else if(object.getSource() == txtHeat){
+			fs.heatSrc = textToFloat(txtHeat.getText(), 0,100, fs.heatSrc,1);
+			txtHeat.setText(String.valueOf(fs.heatSrc));
+		}
 		// Button Input
 		//*****************************************************************
 		else if(object.getSource() == btnPlay ){
@@ -746,7 +811,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		if (object.getSource() == paintVapor){
     	   mVapor=!mVapor;
 		}
-       
+		if (object.getSource() == paintSolid){
+	    	   mSolid=!mSolid;
+			}
      
 		fp.outFields();
 		fp.repaint();
@@ -772,6 +839,9 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 	private JLabel lblSimulationDetail;
 	private JComboBox<Object> comboBox_igr;
 	private JComboBox<Object> comboBox_ipl;
+	private JTextField txtWind;
+	private JTextField txtHeat;
+	private JLabel lblHeatSource;
 	
 	@Override
 	public void mouseClicked(MouseEvent obj) {
@@ -835,6 +905,25 @@ public class FluidViewer implements ActionListener, MouseListener,MouseMotionLis
 		
 		//System.out.println("mx "+mx);
 		//System.out.println("my "+my);
+		if(mSolid && mx>2 && my>2 && ssx-2>mx && (ssy-2)>my){
+			fs.solid[mx][my]	=1;
+			fs.solid[mx-1][my]	=1;
+			fs.solid[mx+1][my]	=1;
+			fs.solid[mx][my-1]	=1;
+			fs.solid[mx][my+1]	=1;
+			
+			fs.solid[mx-1][my+1]	=1;
+			fs.solid[mx+1][my+1]	=1;
+			fs.solid[mx-1][my-1]	=1;
+			fs.solid[mx+1][my-1]	=1;
+			
+			fs.solid[mx-2][my]	=1;
+			fs.solid[mx+2][my]	=1;
+			fs.solid[mx][my-2]	=1;
+			fs.solid[mx][my+2]	=1;
+			
+		}
+		
 		
 		if(mVapor && mx>2 && my>2 && ssx-2>mx && (ssy-2)>my){
 			fs.qvOld[mx][my]	+=0.01;
