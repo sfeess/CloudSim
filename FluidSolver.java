@@ -203,7 +203,7 @@ public class FluidSolver {
 		time=time+dt;
 		step++;
 		solveVel();
-		//solveDens();
+		solveDens();
 	}
 	
 	public void debugLine(String a){
@@ -299,10 +299,17 @@ public class FluidSolver {
 		//debugLine("after copy");
 		//diffuse(0, d, dOld, diff, dt);
 		
-		swapD();
+		for (int i = 0; i < ssx+2; i++) {
+			for (int j = 0; j < ssy+2; j++){
+				d[i][j] = PerlinNoise.perlinNoise(i, j+time*0.8f, 0.81f, 20f, 1.2f)*1*
+						PerlinNoise.perlinNoise(i, j+time*0.8f, 0.61f, 80f, 2f); 
+			}
+		}
+		
+		//swapD();
 		//debugLine("after swap");
 		//advect(0,d,dOld,u,v);
-		advect(4,d,dOld,u,v);
+		//advect(4,d,dOld,u,v);
 		//debugLine("after advection");
 		//copy(d,dOld);
 		
@@ -863,8 +870,12 @@ public void setBounds (int b, float[][] f){
 			
 			for(int i= 0; i<ssx+2; i++){
 				f[i][0] = pt0;
-				if(i>(ssx/2-ssx/4) && i<(ssx/2+ssx/4)){
-					f[i][2] = pt0+	PerlinNoise.perlinNoise(i, time*0.8f+5000, 0.51f, 10f, 1f)*heatSrc; 
+				if(i>(ssx/2-ssx/2.3) && i<(ssx/2+ssx/2.3)){
+					
+					f[i][2] = pt0+	
+									PerlinNoise.perlinNoise(i, 2+time*0.8f, 0.81f, 20f, 1.2f)*heatSrc*
+									PerlinNoise.perlinNoise(i, 2+time*0.8f, 0.61f, 80f, 2f); 
+					
 					f[i][1] = pt0+	0;
 				}
 				f[i][ssy+1] = 	(float) (absT[ssy+1] * Math.pow( (100/absP[ssy+1]) , 0.286 ) );  

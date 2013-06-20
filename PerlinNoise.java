@@ -86,10 +86,10 @@ public class PerlinNoise {
 	
 	
 	public static float perlinNoise(float x, float y, float per,float scale, float contrast){
-		// resulting value and persitance
+		// resulting value and persitence
 		float res=0;
 		// Number of octaves
-		int oct = 1;
+		int oct = 5;
 		
 		res=0;
 		
