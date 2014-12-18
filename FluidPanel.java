@@ -86,31 +86,16 @@ public class FluidPanel extends JPanel{
 					}
 					else	c_qv=0;
 					
-					//if(c_qc>max){
-					//	max=c_qc;
-					//	System.out.println("___________________________________"+max);
-					//}
 					
-					d[0]=c_qc; //cloudColor(c_qc).getRed();
-					d[1]=c_qc; //cloudColor(c_qc).getGreen();
-					d[2]=c_qc; //cloudColor(c_qc).getBlue();
-					
-					d[0] = Math.min(255, d[0]);
-					d[1] = Math.min(255, d[1]+c_qv*2);
-					d[2] = Math.min(255, d[2]);
+					d[0] = Math.min(255, d[0]+c_qc);
+					d[1] = Math.min(255, d[1]+c_qc+c_qv);
+					d[2] = Math.min(255, d[2]+c_qc);
 				}
 				
 				// Temperature Out
 				//*********************************************************
 				if(FluidViewer.dispMain==1){
 					c_pt = (int) out_pt[i][f.sy-1-j];
-					
-					//if(c_pt>max){
-						//max=c_pt;
-						//System.out.println("___________________________________"+max);
-						//}
-					
-					//c_pt = c_pt>254 ? 255:c_pt; 
 					
 					d[0]=heatColor(c_pt).getRed();
 					d[1]=heatColor(c_pt).getGreen();
@@ -280,42 +265,7 @@ public class FluidPanel extends JPanel{
 		
 	}
 	
-public static Color cloudColor(float dens){
-		
-		Color res;
-		Color c1 = new Color(51, 102, 153);
-		Color c2 = new Color(255, 255, 255);
-		Color c3 = new Color(129, 154, 184);
-		
-		
-		//Color c1 = new Color(0, 0, 0);
-		//Color c2 = new Color(255, 0, 0);
-		//Color c3 = new Color(0, 255, 0);
-		
-		
-		float  p[] = {0f,180f,250f};
-		//System.out.println(temp);
-		if (dens<p[0])dens=p[0]+1;
-		if(dens<p[1]){
-			res =  new Color(
-							(int) ((float)c1.getRed()    +  ( ((dens-p[0])/(p[1]-p[0]))  * ((float)c2.getRed()  -(float)c1.getRed() ) )), 
-							(int) ((float)c1.getGreen()  +  ( ((dens-p[0])/(p[1]-p[0]))  * ((float)c2.getGreen()-(float)c1.getGreen() ) )), 
-							(int) ((float)c1.getBlue()   +  ( ((dens-p[0])/(p[1]-p[0]))  * ((float)c2.getBlue() -(float)c1.getBlue() ) ))
-							); 
-		}
-		else if(dens<p[2]){
-			res =  new Color(
-							(int) ((float)c2.getRed()    +  ( ((dens-p[1])/(p[2]-p[1]))  * ((float)c3.getRed()  -(float)c2.getRed() ) )), 
-							(int) ((float)c2.getGreen()  +  ( ((dens-p[1])/(p[2]-p[1]))  * ((float)c3.getGreen()-(float)c2.getGreen() ) )), 
-							(int) ((float)c2.getBlue()   +  ( ((dens-p[1])/(p[2]-p[1]))  * ((float)c3.getBlue() -(float)c2.getBlue() ) ))
-							); 
-		}
-				
-		else res = c3;
-		
-		return res;
-		
-	}
+	
 	
 
 }

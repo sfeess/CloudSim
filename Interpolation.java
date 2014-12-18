@@ -128,22 +128,6 @@ public class Interpolation {
 		int y3 = y+1;
 		int y4 = y+2;
 		
-		/*
-		if(x<1){x1=0;}
-		if(y<1){y1=0;}
-		
-		if(x<0){x2=0; x3=1; x4=2;}
-		if(y<0){y2=0; y3=1; y4=2;}
-		
-		if(x>ssx-1){x4=ssx+1;}
-		if(y>ssy-1){y4=ssy+1;}
-		
-		if(x>ssx){x3=ssx+1;}
-		if(y>ssy){y3=ssy+1;}
-		
-		if(x>ssx+1){x2=ssx+1; x1=ssx;}
-		if(y>ssy+1){y2=ssy+1; y1=ssy;}
-		*/
 		
 		if(y<1){y1=0;}
 		if(y<0){y2=0; y3=1; y4=2;}
@@ -201,18 +185,16 @@ public class Interpolation {
 	
 	
 	public static float per_BiLin(float xpos, float ypos, float[][] f){
-		x1 = (int)Math.floor(xpos);
+		x1 = (int) xpos;
 		x2 = x1+1;
-		y1 = (int)Math.floor(ypos);
+		y1 = (int) ypos;
 		y2 = y1+1;
 		
 		// Periodic X-Boarder
-		if(x1<1){					x1 = ssx+1 + x1;	
-			if(x2<1)				x2 = ssx+1 + x2;	
-		}
-		else if(x2>ssx){			x2 = (x2-ssx);	
-			if(x1>ssx)				x1 = (x1-ssx);	
-		}		
+		if(x1<1){					x1 = ssx + x1;	}
+		if(x2<1){					x2 = ssx + x2;	}
+		if(x1>ssx){					x1 = (x1-ssx);	}			
+		if(x2>ssx){					x2 = (x2-ssx);	}
 		
 		// Y-Boarder
 		if(y1<0){					y1 = 0;	}
